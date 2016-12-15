@@ -1,4 +1,4 @@
-import discord
+﻿import discord
 from discord.ext import commands
 import os
 from FlandreBot.utils.IO import files
@@ -67,14 +67,14 @@ class General:
                 message = "Nice try but: \n"
                 user = ctx.message.author
             chars = "abcdefghijklmnopqrstvwxyz"
-            flippedchars = "?q?p???????l?uodb?s???x?z"
-            flippedcapchars = "?q?p???HI???WNO?Q?S-n?MX?Z"
+            flippedchars = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇʌʍxʎz"
+            flippedcapchars = "∀qƆpƎℲפHIſʞ˥WNOԀQɹS┴∩ΛMX⅄Z"
             trans = str.maketrans(chars, flippedchars)
             name = user.name.translate(trans)
             chars = chars.upper()
             trans = str.maketrans(chars, flippedcapchars)
             name = user.name.translate(trans)
-            await self.bot.say(message + "(?�?�)?? " + name[::-1])
+            await self.bot.say(message + "(╯°□°）╯︵ " + name[::-1])
         else:
             await self.bot.say("its " + randchoice(["heads!", "tails!"]))
         
