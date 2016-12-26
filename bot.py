@@ -11,14 +11,14 @@ while run:
 	# Make new Bot and get asyncio loop
 	try:
 		loop = asyncio.get_event_loop()
-		bot = FlandreBot.BOT(prefix = '!', description = 'test')
+		bot = FlandreBot.BOT()
 	except Exception as e:
 		print('[!] Error: {0}'.format(e))
 		run = False	
 	else:		
 		try:
 			# Start bot
-			loop.run_until_complete(bot.start('MjQ3NDAzNTM5MTg4NTQ3NTg0.CzP8PQ.OyTUSzCBXtXQ25KNbbhtrLi_uII'))
+			loop.run_until_complete(bot.start())
 		except discord.LoginFailure:
 			# Logon Fails
 			loop.run_until_complete(bot.logout())

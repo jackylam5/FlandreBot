@@ -27,6 +27,59 @@ class Test:
             await self.bot.say("{}, your account has been created!".format(user.mention))
         else:
             await self.bot.say("{}, you already have an account!".format(user.mention))
+
+    @commands.command(pass_context = True, no_pm = True)
+    async def getinfo(self, ctx):
+        ''' Get users Stats '''
+        message = ctx.message
+
+        if len(message.mentions) == 0:
+            user = message.author
+        else:
+            user = message.mentions[0]
+
+        # Get users last sent message
+        messages = self.bot.messages
+        messages.reverse()
+        last_message = discord.utils.get(messages, author__id=user.id)
+        del messages
+
+        # Get users top role
+        if user.top_role.name == '@everyone':
+            role = user.top_role.name[1:]
+        else:
+            role = user.top_role.name
+
+        embedcolour = discord.Colour(65535)
+        userembed = discord.Embed(type='rich', colour=embedcolour)
+        userembed.add_field(name='Name', value=user.name)
+        userembed.add_field(name='ID', value=user.id)
+
+        # Check for nickname
+        if user.nick is not None:
+            userembed.add_field(name='Nickname', value=user.nick)
+
+        userembed.add_field(name='Created', value=user.created_at)
+        userembed.add_field(name='Joined', value=user.joined_at)
+
+        # Check voice channel
+        if user.voice.voice_channel is not None:
+            userembed.add_field(name='Voice Channel', value=user.voice.voice_channel.name)
+
+        # Get Users roles
+        roles = [role.name for role in user.roles if role.name != '@everyone']
+        if roles:
+            userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
+
+        # Check for last message
+        if last_message is not None:
+            userembed.add_field(name='Last Message', value=last_message.content, inline=False)
+
+        # Set users avatar
+        userembed.set_thumbnail(url=user.avatar_url)
+
+        await self.bot.say(embed=userembed)
+
             
 
 def check_files():
