@@ -34,15 +34,18 @@ class General:
             await self.bot.say(randchoice(choices))
 
     @commands.command(pass_context=True)
-    async def roll(self, ctx, number):
+    async def roll(self, ctx, *number):
         """Rolls a random number
         """
         
         author = ctx.message.author
         
+        if number == None:
+            number = 100
+        
         try:
             
-            number = int(number)
+            number = int(number[0])
             
             if number > 1:
                 number = str(randint(1, number))
@@ -63,6 +66,8 @@ class General:
         """
         if user != None:
             message = ""
+            print("dasdadasdadsddsd")
+            print(user.id)
             if user.id == self.bot.id:
                 message = "Nice try but: \n"
                 user = ctx.message.author
@@ -74,6 +79,7 @@ class General:
             chars = chars.upper()
             trans = str.maketrans(chars, flippedcapchars)
             name = user.name.translate(trans)
+            print("test")
             await self.bot.say(message + "(╯°□°）╯︵ " + name[::-1])
         else:
             await self.bot.say("its " + randchoice(["heads!", "tails!"]))
@@ -130,31 +136,58 @@ class General:
             text = " ".join(text)
             await self.bot.say("http://lmgtfy.com/?q=" + text)
             
-    @commands.command(pass_context=True, no_pm=True)
-    async def info(self, ctx, user : discord.Member = None):
-        """Shows users's informations"""
-        
-        if self.checkBotChannel(ctx.message.channel):
-            author = ctx.message.author
-            if not user:
-                user = author
-            roles = []
-            for m in user.roles:
-                if m.name != "@everyone":
-                    roles.append('"' + m.name + '"') #.replace("@", "@\u200b")
-            if not roles: roles = ["None"]
-            data = "```python\n"
-            data += "Name: " + user.name + "#{}\n".format(user.discriminator)
-            data += "ID: " + user.id + "\n"
-            data += "Created: " + str(user.created_at) + "\n"
-            data += "Joined: " + str(user.joined_at) + "\n"
-            data += "Roles: " + " ".join(roles) + "\n"
-            data += "Avatar: " + user.avatar_url + "\n"
-            data += "```"
-            await self.bot.say(data)  
+    @commands.command(pass_context = True, no_pm = True)
+    async def info(self, ctx):
+        ''' Get users Stats '''
+        message = ctx.message
+
+        if len(message.mentions) == 0:
+            user = message.author
         else:
-            await self.bot.say("Bot room only command")
-        
+            user = message.mentions[0]
+
+        # Get users last sent message
+        messages = self.bot.messages
+        messages.reverse()
+        last_message = discord.utils.get(messages, author__id=user.id)
+        del messages
+
+        # Get users top role
+        if user.top_role.name == '@everyone':
+            role = user.top_role.name[1:]
+        else:
+            role = user.top_role.name
+
+        embedcolour = discord.Colour(65535)
+        userembed = discord.Embed(type='rich', colour=embedcolour)
+        userembed.add_field(name='Name', value=user.name)
+        userembed.add_field(name='ID', value=user.id)
+
+        # Check for nickname
+        if user.nick is not None:
+            userembed.add_field(name='Nickname', value=user.nick)
+
+        userembed.add_field(name='Created', value=user.created_at)
+        userembed.add_field(name='Joined', value=user.joined_at)
+
+        # Check voice channel
+        if user.voice.voice_channel is not None:
+            userembed.add_field(name='Voice Channel', value=user.voice.voice_channel.name)
+
+        # Get Users roles
+        roles = [role.name for role in user.roles if role.name != '@everyone']
+        if roles:
+            userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
+
+        # Check for last message
+        if last_message is not None:
+            userembed.add_field(name='Last Message', value=last_message.content, inline=False)
+
+        # Set users avatar
+        userembed.set_thumbnail(url=user.avatar_url)
+
+        await self.bot.say(embed=userembed)
+
     @commands.command(pass_context=True, no_pm=True)
     async def server(self, ctx):
         """Shows server's informations"""

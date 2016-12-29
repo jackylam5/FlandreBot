@@ -44,7 +44,7 @@ class Owner:
             # Check if user has the manage_server perm
             
             if self.checkAdmin(message.author, message.channel):
-                self.load(module)
+                self.loadcog(module)
                 await self.bot.say("Done loading " + module)
             else:
                 await self.bot.say("You need the manage server permission")
@@ -61,7 +61,7 @@ class Owner:
             # Check if user has the manage_server perm
             
             if self.checkAdmin(message.author, message.channel):
-                self.unload(module)
+                self.unloadcog(module)
                 await self.bot.say("Done loading " + module)
             else:
                 await self.bot.say("You need the manage server permission")
