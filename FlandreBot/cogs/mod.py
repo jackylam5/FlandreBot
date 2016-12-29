@@ -478,6 +478,11 @@ class Mod:
         if roles:
             userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
 
+        # get past names
+        if user.id in self.past_names:
+            names = ', '.join(self.past_names[user.id][-5:])
+            userembed.add_field(name='Past names', value=names, inline=False)
+        
         # Check for last message
         if last_message is not None:
             userembed.add_field(name='Last Message', value=last_message.content, inline=False)
