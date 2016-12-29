@@ -26,6 +26,13 @@ class Owner:
             # Check if user has the manage_server perm
             
             if self.checkAdmin(message.author, message.channel):
+                
+                # Get the module's cog and check it has a _unload function in it (Must be an async function)
+                cog = self.bot.get_cog(module)
+                unload_function = getattr(cog, "_unload", None)
+                if unload_function is not None:
+                    await unload_function()
+
                 self.reloadcog(module)
                 await self.bot.say("Done reloading " + module)
             else:
@@ -61,6 +68,13 @@ class Owner:
             # Check if user has the manage_server perm
             
             if self.checkAdmin(message.author, message.channel):
+                
+                # Get the module's cog and check it has a _unload function in it (Must be an async function)
+                cog = self.bot.get_cog(module)
+                unload_function = getattr(cog, "_unload", None)
+                if unload_function is not None:
+                    await unload_function()
+
                 self.unloadcog(module)
                 await self.bot.say("Done unloading " + module)
             else:
