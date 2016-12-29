@@ -55,6 +55,7 @@ class nsfw:
         
         if not self.nsfwCheck(ctx):
             await self.bot.say('{} please use nsfw channels for this'.format(author.mention))
+            return
         
         linktags = ""
         
@@ -120,6 +121,7 @@ class nsfw:
         
         if not self.nsfwCheck(ctx):
             await self.bot.say('{} please use nsfw channels for this'.format(author.mention))
+            return
         
         linktags = ""
         
@@ -166,6 +168,7 @@ class nsfw:
         
         if not self.nsfwCheck(ctx):
             await self.bot.say('{} please use nsfw channels for this'.format(author.mention))
+            return
         
         linktags = "order:random"
         
@@ -202,7 +205,7 @@ class nsfw:
     
     @commands.command(pass_context=True)
     async def yandere(self, ctx, *tags):
-        """Search pictures on konachan.
+        """Search pictures on yandere.
         """
         
 
@@ -212,6 +215,7 @@ class nsfw:
         
         if not self.nsfwCheck(ctx):
             await self.bot.say('{} please use nsfw channels for this'.format(author.mention))
+            return
         
         linktags = "order:random"
         
