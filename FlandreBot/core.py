@@ -21,7 +21,7 @@ class BOT(commands.Bot):
         self.makeLogger()
         self.config = {}
         self.loadConfig()
-        super().__init__(command_prefix = self.config['prefix'], description = self.config['description'])
+        super().__init__(command_prefix = self.config['prefix'], description = self.config['description'], pm_help = True)
 
     def makeLogger(self):
         ''' Makes the logger and log file '''

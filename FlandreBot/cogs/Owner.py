@@ -82,21 +82,6 @@ class Owner:
         except:
             await self.bot.say("something went wrong")
     
-
-
-#    @commands.command(no_pm=True, pass_context=True)
-#    async def testserver(self, ctx):
-#        """get server id and channel id
-#
-#        """
-#        message = ctx.message
-#        server = message.server
-#        channel = message.channel
-#        await self.bot.whisper("test")
-#        await self.bot.whisper(server.id + "|" + channel.id)  
-#        await self.bot.delete_message(message)
-
-    
     #reload function
     def reloadcog(self, cog):
         if not "FlandreBot.cogs." in cog:

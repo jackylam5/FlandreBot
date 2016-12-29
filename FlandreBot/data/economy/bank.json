@@ -1,0 +1,20 @@
+{
+    "118747700064813056" : {
+        "balance" : 100,
+        "bid" : 0,
+        "card1" : 0,
+        "card2" : 0,
+        "card3" : 0,
+        "card4" : 0,
+        "card5" : 0,
+        "chanceincrease" : 0,
+        "coinincrease" : 0,
+        "currentcard" : 0,
+        "fase" : 0,
+        "name" : "jackylam5",
+        "specialcoin" : 0,
+        "startmoney" : 100,
+        "times" : 0,
+        "totalsc" : 0
+    }
+}

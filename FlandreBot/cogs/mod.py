@@ -16,6 +16,24 @@ class Mod:
         self.ignore_list = files("FlandreBot/data/mod/ignorelist.json", "load")
         self.filter = files("FlandreBot/data/mod/filter.json", "load")
         self.past_names = files("FlandreBot/data/mod/past_names.json", "load")
+        
+    @commands.command(no_pm=True, pass_context=True)
+    async def testserver(self, ctx):
+        """get server id and channel id
+
+        """
+        
+        author = ctx.message.author
+        channel = ctx.message.channel
+        if not self.checkOwner(author):
+            return
+        
+        message = ctx.message
+        server = message.server
+        channel = message.channel
+        await self.bot.whisper("test")
+        await self.bot.whisper("server id: " + server.id + " | channel id: " + channel.id)  
+        await self.bot.delete_message(message)    
 
     @commands.command(no_pm=True, pass_context=True)
     async def kick(self, ctx, user : discord.Member):
@@ -79,9 +97,9 @@ class Mod:
         cleanup user [name/mention] [number]
         cleanup text \"Text here\" [number]"""
         if ctx.invoked_subcommand is None:
-            message = """
-            !cleanup messages [number]\n!cleanup user [name/mention] [number]\n!cleanup text "Text here" [number]"""
-            await self.bot.say(message)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
 
     @cleanup.command(pass_context=True, no_pm=True)
     async def text(self, ctx, text : str, number : int):
@@ -178,7 +196,7 @@ class Mod:
         """Adds servers/channels to ignorelist"""
         
         if ctx.invoked_subcommand is None:
-            message = """!ignore channel\n!ignore server"""
+            message = """"```examples:\n!ignore channel\n!ignore server"""
             await self.bot.say(message)
             await self.bot.say(self.count_ignored())
 
@@ -227,8 +245,9 @@ class Mod:
     async def unignore(self, ctx):
         """Removes servers/channels from ignorelist"""
         if ctx.invoked_subcommand is None:
-            message = """!unignore channel\n!unignore server"""
-            await self.bot.say(message)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
             await self.bot.say(self.count_ignored())
 
     @unignore.command(name="channel", pass_context=True)
@@ -292,8 +311,9 @@ class Mod:
             return
         
         if ctx.invoked_subcommand is None:
-            message = """!filter add "words"\n!filter remove "words"\n"""
-            await self.bot.say(message)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
             server = ctx.message.server
             author = ctx.message.author
             msg = ""
@@ -313,7 +333,9 @@ class Mod:
         filter add word1 word2 word3
         filter add \"This is a sentence\""""
         if words == ():
-            await send_cmd_help(ctx)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
             return
         server = ctx.message.server
         added = 0
@@ -338,7 +360,9 @@ class Mod:
         filter remove word1 word2 word3
         filter remove \"This is a sentence\""""
         if words == ():
-            await send_cmd_help(ctx)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
             return
         server = ctx.message.server
         removed = 0
@@ -365,7 +389,9 @@ class Mod:
             return
         
         if ctx.invoked_subcommand is None:
-            await send_cmd_help(ctx)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
 
     @editrole.command(aliases=["color"], pass_context=True)
     async def colour(self, ctx, role : discord.Role, value : discord.Colour):
@@ -409,6 +435,58 @@ class Mod:
             print(e)
             await self.bot.say("Something went wrong.")
 
+    @commands.command(pass_context = True, no_pm = True)
+    async def info(self, ctx):
+        ''' Get users Stats '''
+        message = ctx.message
+
+        if len(message.mentions) == 0:
+            user = message.author
+        else:
+            user = message.mentions[0]
+
+        # Get users last sent message
+        messages = self.bot.messages
+        messages.reverse()
+        last_message = discord.utils.get(messages, author__id=user.id)
+        del messages
+
+        # Get users top role
+        if user.top_role.name == '@everyone':
+            role = user.top_role.name[1:]
+        else:
+            role = user.top_role.name
+
+        embedcolour = discord.Colour(65535)
+        userembed = discord.Embed(type='rich', colour=embedcolour)
+        userembed.add_field(name='Name', value=user.name)
+        userembed.add_field(name='ID', value=user.id)
+
+        # Check for nickname
+        if user.nick is not None:
+            userembed.add_field(name='Nickname', value=user.nick)
+
+        userembed.add_field(name='Created', value=user.created_at)
+        userembed.add_field(name='Joined', value=user.joined_at)
+
+        # Check voice channel
+        if user.voice.voice_channel is not None:
+            userembed.add_field(name='Voice Channel', value=user.voice.voice_channel.name)
+
+        # Get Users roles
+        roles = [role.name for role in user.roles if role.name != '@everyone']
+        if roles:
+            userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
+
+        # Check for last message
+        if last_message is not None:
+            userembed.add_field(name='Last Message', value=last_message.content, inline=False)
+
+        # Set users avatar
+        userembed.set_thumbnail(url=user.avatar_url)
+
+        await self.bot.say(embed=userembed)        
+            
     @commands.command()
     async def names(self, user : discord.Member):
         """Show previous names of a user"""
@@ -504,6 +582,14 @@ class Mod:
                 self.config = json.load(config)
         except json.decoder.JSONDecodeError:
             pass
+            
+    def send_cmd_help(self, ctx):
+        if ctx.invoked_subcommand:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
+            return pages
+        else:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.command)
+            return pages
 
 def check_folders():
     if not os.path.exists("FlandreBot/data/mod"):
