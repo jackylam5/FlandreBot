@@ -62,7 +62,7 @@ class Owner:
             
             if self.checkAdmin(message.author, message.channel):
                 self.unloadcog(module)
-                await self.bot.say("Done loading " + module)
+                await self.bot.say("Done unloading " + module)
             else:
                 await self.bot.say("You need the manage server permission")
         except:

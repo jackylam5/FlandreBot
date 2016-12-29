@@ -59,8 +59,13 @@ class BOT(commands.Bot):
     async def on_ready(self):
         ''' When bot has fully logged on '''
         print('[*] Logged in as: {0.user.name} ({0.user.id}).'.format(self))
-        self.logger.info('Logged in as: {0.user.name} ({0.user.id})'.format(self))         
+        self.logger.info('Logged in as: {0.user.name} ({0.user.id})'.format(self))     
+        owd = os.getcwd()
         os.chdir("FlandreBot/cogs")
         for file in glob.glob("*.py"):
+            os.chdir(owd)
             self.load_extension('FlandreBot.cogs.' + file[:-3] + '')
+            os.chdir("FlandreBot/cogs")
+        os.chdir(owd)
+        
         

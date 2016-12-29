@@ -66,20 +66,17 @@ class General:
         """
         if user != None:
             message = ""
-            print("dasdadasdadsddsd")
-            print(user.id)
-            if user.id == self.bot.id:
+            if user.id == self.bot.user.id:
                 message = "Nice try but: \n"
                 user = ctx.message.author
-            chars = "abcdefghijklmnopqrstvwxyz"
-            flippedchars = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇʌʍxʎz"
+            chars = "abcdefghijklmnopqrstuvwxyz"
+            flippedchars = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz"
             flippedcapchars = "∀qƆpƎℲפHIſʞ˥WNOԀQɹS┴∩ΛMX⅄Z"
             trans = str.maketrans(chars, flippedchars)
             name = user.name.translate(trans)
             chars = chars.upper()
             trans = str.maketrans(chars, flippedcapchars)
-            name = user.name.translate(trans)
-            print("test")
+            name = name.translate(trans)
             await self.bot.say(message + "(╯°□°）╯︵ " + name[::-1])
         else:
             await self.bot.say("its " + randchoice(["heads!", "tails!"]))
@@ -197,19 +194,21 @@ class General:
             server = ctx.message.server
             online = str(len([m.status for m in server.members if str(m.status) == "online" or str(m.status) == "idle"]))
             total = str(len(server.members))
+            
+            
+            embedcolour = discord.Colour(16711680)
+            serverembed = discord.Embed(type='rich', colour = embedcolour)
+            serverembed.add_field(name='Name', value = server.name)
+            serverembed.add_field(name='ID', value = server.id)
+            serverembed.add_field(name='Region',value = server.region)
+            serverembed.add_field(name='Users total', value = total)
+            serverembed.add_field(name='Users online', value = online)
+            serverembed.add_field(name='Amount of roles', value = len(server.roles))
+            serverembed.add_field(name='Created', value = str(server.created_at))
+            serverembed.add_field(name='Owner', value = server.owner.name + "#" + server.owner.discriminator)
+            serverembed.set_thumbnail(url=server.icon_url)
+            await self.bot.say(embed=serverembed)
     
-            data = "```\n"
-            data += "Name: {}\n".format(server.name)
-            data += "ID: {}\n".format(server.id)
-            data += "Region: {}\n".format(str(server.region))
-            data += "Users: {}/{}\n".format(online, total)
-            data += "Channels: {}\n".format(str(len(server.channels)))
-            data += "Roles: {}\n".format(str(len(server.roles)))
-            data += "Created: {}\n".format(str(server.created_at))
-            data += "Owner: {}#{}\n".format(server.owner.name, server.owner.discriminator)
-            data += "Icon: {}\n".format(server.icon_url)
-            data += "```"
-            await self.bot.say(data)
         else:
             await self.bot.say("Bot room only command")
         
@@ -345,4 +344,5 @@ def check_folders():
 def setup(bot):
     check_folders()
     n = General(bot)
+    bot.add_listener(n.check_poll_votes, "on_message")
     bot.add_cog(n)
