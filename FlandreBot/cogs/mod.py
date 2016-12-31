@@ -516,27 +516,6 @@ class Mod:
         if message.author.id == self.bot.user.id or self.immune_from_filter(message) or not can_delete: # Owner, admins and mods are immune to the filter
             return
             
-        if server.id == "181866934353133570":   
-            if channel.id == "209074609893408768":
-                if message.content.lower() == "!agree":
-                    try: # Something else in discord.py is throwing a 404 error after deletion
-                        await self.bot.delete_message(message)
-                        author = message.author
-                        guest = discord.utils.get(message.server.roles, name="Guest")
-                        member = discord.utils.get(message.server.roles, name="Member")
-                        if guest in message.author.roles:
-                            try:
-                                await self.bot.remove_roles(author, guest)
-                            except:
-                                pass
-                            
-                    except:
-                        pass
-                else:
-                    try: # Something else in discord.py is throwing a 404 error after deletion
-                        await self.bot.delete_message(message)
-                    except:
-                        pass
         elif server.id in self.filter.keys():
             for w in self.filter[server.id]:
                 if w in message.content.lower():

@@ -61,9 +61,6 @@ class nsfw:
         
         if len(tags) > 0:
 
-            
-            
-            
             for p in tags:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
@@ -130,9 +127,6 @@ class nsfw:
         
         if len(tags) > 0:
 
-            linktags = ""
-            
-            
             for p in tags:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
@@ -177,9 +171,6 @@ class nsfw:
         
         if len(tags) > 0:
 
-            linktags = ""
-            
-            
             for p in tags:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
@@ -223,9 +214,6 @@ class nsfw:
         linktags = "order:random"
         
         if len(tags) > 0:
-
-            linktags = ""
-            
             
             for p in tags:
                 replaced = re.sub(' ', '_', str(p))
