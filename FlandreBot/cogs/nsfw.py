@@ -95,7 +95,10 @@ class nsfw:
                 info = xmltodict.parse(data)
 
                 # Choose Image
-                image = random.choice(info['posts']['post'])
+                if int(info['posts']['@count']) == 1:
+                    image = info['posts']['post']
+                else:
+                    image = random.choice(info['posts']['post'])
                 try:
                     colour = Colour(15839969)
                     embed = Embed(type='rich', colour=colour)
