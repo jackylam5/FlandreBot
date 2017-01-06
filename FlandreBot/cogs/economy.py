@@ -7,6 +7,7 @@ import os
 import time
 import json
 import logging
+from FlandreBot.utils import permissions
 
 """message.channel.name == "gambling"""
 
@@ -149,6 +150,7 @@ class economy:
 
 
     @_bank.command(name="set", pass_context=True)
+    @permissions.checkOwner()
     async def _set(self, ctx, user : discord.Member, sum : int):
         """Sets money of user's bank account
 
@@ -156,8 +158,6 @@ class economy:
         
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
         
         if ctx.message.channel.name == "gambling":
             author = ctx.message.author

@@ -23,7 +23,13 @@ class General:
     async def ping(self):
         """Pong."""
         await self.bot.say("Pong")
-        
+    
+    @commands.command(pass_context=True)
+    async def join(self):
+        """gives oauth link"""
+        message = discord.utils.oauth_url("182582052497915904", permissions=discord.Permissions.all())
+        await self.bot.whisper(message)
+    
     @commands.command()
     async def choose(self, *choices):
         """Let the bot make your choice!

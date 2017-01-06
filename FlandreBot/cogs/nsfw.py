@@ -33,10 +33,7 @@ class nsfw:
                 else:
                     await self.bot.remove_roles(author, testrole)
                     await self.bot.say("nsfw role removed")
-            except discord.Forbidden:
-                await self.bot.say("I need permissions to manage roles first.")
-            except Exception as e:
-                print(e)
+            except:
                 await self.bot.say("Something went wrong.")        
         else:
             await self.bot.say("bot room only command")
@@ -65,7 +62,6 @@ class nsfw:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
             
-            linktags = linktags[1:] 
 
         
         
@@ -131,7 +127,6 @@ class nsfw:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
             
-            linktags = linktags[1:]  
         
         base_url = 'http://danbooru.donmai.us/posts.json?limit=1&random=true&tags={0}'
         post_url = 'http://danbooru.donmai.us/posts/{0}'
@@ -175,7 +170,6 @@ class nsfw:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
             
-            linktags = linktags[1:]  
         
         base_url = 'http://konachan.com/post.json?limit={0}&page={1}&tags={2}'
         post_url = 'http://konachan.com/post/show/{0}'
@@ -219,8 +213,6 @@ class nsfw:
                 replaced = re.sub(' ', '_', str(p))
                 linktags = linktags + "+" + str(replaced)
             
-            linktags = linktags[1:]  
-        
         base_url = 'https://yande.re/post.json?limit=1&tags={0}&login={1}&password_hash={2}'
         post_url = 'https://yande.re/post/show/{0}'
         

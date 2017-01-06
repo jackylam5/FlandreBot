@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import importlib
+from FlandreBot.utils import permissions
 
 class unloadError(Exception):
     pass
@@ -17,68 +18,56 @@ class Owner:
         self.bot = bot
     
     @commands.command(pass_context=True)
+    @permissions.checkOwner()
     async def reload(self, ctx, *, module: str):
         """Reload modules."""
         # Get the message sent
         message = ctx.message
 
         try:
-            # Check if user has the manage_server perm
-            
-            if self.checkAdmin(message.author, message.channel):
-                
-                # Get the module's cog and check it has a _unload function in it (Must be an async function)
-                cog = self.bot.get_cog(module)
-                unload_function = getattr(cog, "_unload", None)
-                if unload_function is not None:
-                    await unload_function()
+            # Get the module's cog and check it has a _unload function in it (Must be an async function)
+            cog = self.bot.get_cog(module)
+            unload_function = getattr(cog, "_unload", None)
+            if unload_function is not None:
+                await unload_function()
 
-                self.reloadcog(module)
-                await self.bot.say("Done reloading " + module)
-            else:
-                await self.bot.say("You need the manage server permission")
+            self.reloadcog(module)
+            await self.bot.say("Done reloading " + module)
         except:
             await self.bot.say("something went wrong")
 
             
     @commands.command(pass_context=True)
+    @permissions.checkOwner()
     async def load(self, ctx, *, module: str):
         """Reload modules."""
         # Get the message sent
         message = ctx.message
 
         try:
-            # Check if user has the manage_server perm
-            
-            if self.checkAdmin(message.author, message.channel):
-                self.loadcog(module)
-                await self.bot.say("Done loading " + module)
-            else:
-                await self.bot.say("You need the manage server permission")
+            self.loadcog(module)
+            await self.bot.say("Done loading " + module)
+
         except:
             await self.bot.say("something went wrong")
     
     @commands.command(pass_context=True)    
+    @permissions.checkOwner()
     async def unload(self, ctx, *, module: str):
         """Reload modules."""
         # Get the message sent
         message = ctx.message
 
         try:
-            # Check if user has the manage_server perm
-            
-            if self.checkAdmin(message.author, message.channel):
-                
-                # Get the module's cog and check it has a _unload function in it (Must be an async function)
-                cog = self.bot.get_cog(module)
-                unload_function = getattr(cog, "_unload", None)
-                if unload_function is not None:
-                    await unload_function()
+            # Get the module's cog and check it has a _unload function in it (Must be an async function)
+            cog = self.bot.get_cog(module)
+            unload_function = getattr(cog, "_unload", None)
+            if unload_function is not None:
+                await unload_function()
 
-                self.unloadcog(module)
-                await self.bot.say("Done unloading " + module)
-            else:
-                await self.bot.say("You need the manage server permission")
+            self.unloadcog(module)
+            await self.bot.say("Done unloading " + module)
+
         except:
             await self.bot.say("something went wrong")
     

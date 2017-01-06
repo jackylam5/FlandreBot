@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from FlandreBot.utils.IO import files
+from FlandreBot.utils import permissions
 import os
 import logging
 import json
@@ -18,6 +19,7 @@ class Mod:
         self.past_names = files("FlandreBot/data/mod/past_names.json", "load")
         
     @commands.command(no_pm=True, pass_context=True)
+    @permissions.checkOwner()
     async def testserver(self, ctx):
         """get server id and channel id
 
@@ -36,12 +38,11 @@ class Mod:
         await self.bot.delete_message(message)    
 
     @commands.command(no_pm=True, pass_context=True)
+    @permissions.checkMod()
     async def kick(self, ctx, user : discord.Member):
         """Kicks user."""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkMod(author, channel):
-            return
         try:
             await self.bot.kick(user)
             await self.bot.say("Done. That felt good.")
@@ -51,14 +52,13 @@ class Mod:
             print(e)
 
     @commands.command(no_pm=True, pass_context=True)
+    @permissions.checkAdmin()
     async def ban(self, ctx, user : discord.Member, days : int=0):
         """Bans user and deletes last X days worth of messages.
 
         Minimum 0 days, maximum 7. Defaults to 0."""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
         if days < 0 or days > 7:
             await self.bot.say("Invalid days. Must be between 0 and 7.")
             return
@@ -71,14 +71,13 @@ class Mod:
             print(e)
 
     @commands.command(no_pm=True, pass_context=True)
+    @permissions.checkMod()
     async def rename(self, ctx, user : discord.Member, *, nickname=""):
         """Changes user's nickname
 
         Leaving the nickname empty will remove it."""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkMod(author, channel):
-            return
         nickname = nickname.strip()
         if nickname == "":
             nickname = None
@@ -90,6 +89,7 @@ class Mod:
                 "\"Manage Nicknames\" permission.")
 
     @commands.group(pass_context=True, no_pm=True)
+    @permissions.checkMod()
     async def cleanup(self, ctx):
         """Deletes messages.
 
@@ -111,8 +111,6 @@ class Mod:
         Remember to use double quotes."""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkMod(author, channel):
-            return
         message = ctx.message
         cmdmsg = message
         try:
@@ -146,8 +144,6 @@ class Mod:
         cleanup user Red 6"""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkMod(author, channel):
-            return
         message = ctx.message
         cmdmsg = message
         try:
@@ -180,8 +176,6 @@ class Mod:
         cleanup messages 26"""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkMod(author, channel):
-            return
         channel = ctx.message.channel
         try:
             if number > 0 and number < 10000:
@@ -192,6 +186,7 @@ class Mod:
             await self.bot.say("I need permissions to manage messages in this channel.")
 
     @commands.group(pass_context=True, no_pm=True)
+    @permissions.checkAdmin()
     async def ignore(self, ctx):
         """Adds servers/channels to ignorelist"""
         
@@ -207,8 +202,6 @@ class Mod:
         Defaults to current one"""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
         current_ch = ctx.message.channel
         if not channel:
             if current_ch.id not in self.ignore_list["CHANNELS"]:
@@ -231,8 +224,6 @@ class Mod:
         """Ignores current server"""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
         server = ctx.message.server
         if server.id not in self.ignore_list["SERVERS"]:
             self.ignore_list["SERVERS"].append(server.id)
@@ -242,6 +233,7 @@ class Mod:
             await self.bot.say("This server is already being ignored.")
 
     @commands.group(pass_context=True, no_pm=True)
+    @permissions.checkAdmin()
     async def unignore(self, ctx):
         """Removes servers/channels from ignorelist"""
         if ctx.invoked_subcommand is None:
@@ -257,8 +249,6 @@ class Mod:
         Defaults to current one"""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
         current_ch = ctx.message.channel
         if not channel:
             if current_ch.id in self.ignore_list["CHANNELS"]:
@@ -281,8 +271,6 @@ class Mod:
         """Removes current server from ignore list"""
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
         server = ctx.message.server
         if server.id in self.ignore_list["SERVERS"]:
             self.ignore_list["SERVERS"].remove(server.id)
@@ -298,6 +286,7 @@ class Mod:
         return msg
 
     @commands.group(name="filter", pass_context=True, no_pm=True)
+    @permissions.checkMod()
     async def _filter(self, ctx):
         """Adds/removes words from filter
 
@@ -307,8 +296,6 @@ class Mod:
         
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkMod(author, channel):
-            return
         
         if ctx.invoked_subcommand is None:
             pages = self.send_cmd_help(ctx)
@@ -380,14 +367,13 @@ class Mod:
             await self.bot.say("Those words weren't in the filter.")
 
     @commands.group(no_pm=True, pass_context=True)
+    @permissions.checkAdmin()
     async def editrole(self, ctx):
         """Edits roles settings"""
         
         author = ctx.message.author
         channel = ctx.message.channel
-        if not self.checkAdmin(author, channel):
-            return
-        
+
         if ctx.invoked_subcommand is None:
             pages = self.send_cmd_help(ctx)
             for page in pages:
