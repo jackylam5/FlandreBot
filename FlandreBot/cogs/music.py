@@ -19,6 +19,7 @@ class MusicPlayer():
         self.player = None
         self.volume = 0.25
         self.song_end_time = None
+        self.pause_time_left = None
         # Queue will hold the song name, the url for that song and the name of the person that requested it in a dictionary
         self.queue = []
         self.repeat = False
@@ -282,6 +283,8 @@ class MusicPlayer():
 
                         if search:
                             msg = ':notes: Queued: **{0}**'
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
                             await self.bot.edit_message(temp_mesg, msg.format(result['entries'][0]['title']))
                         else:
                             if queued > 0:
@@ -289,6 +292,10 @@ class MusicPlayer():
                                 msg = 'Queued: **{0}** songs'
                             else:
                                 msg = 'No songs were added'
+
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
+
                             await self.bot.edit_message(temp_mesg, msg.format(str(queued)))
 
                     else:
@@ -305,9 +312,15 @@ class MusicPlayer():
 
                             # Tell the user the song has been queue
                             msg = ':notes: Queued: **{0}**'
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
+
                             await self.bot.edit_message(temp_mesg, msg.format(title))
                         else:
-                            await self.bot.edit_message(temp_mesg, 'Could not add that song')
+                            msg = 'Could not add that song'
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
+                            await self.bot.edit_message(temp_mesg, msg)
                             self.bot.logger.warning("[{0.name}] Video from {1}, could not be downloaded".format(self.server, link))
 
                 if self.player is None and len(self.queue) > 0:
@@ -353,7 +366,7 @@ class MusicPlayer():
                     self.song_end_time = time.time() + self.player.duration
 
                     # Sleep while music is playing
-                    while self.player.is_playing():
+                    while self.player.is_playing() or not self.player.is_done():
                         await asyncio.sleep(1)
 
                     # Clear the queue of that song and reset skip
@@ -367,8 +380,12 @@ class MusicPlayer():
             msg = '{0.mention}, There is nothing playing'
             await self.bot.send_message(message.channel, msg.format(message.author))
         else:
-            time_left = round(self.song_end_time - time.time())
-            current_dur = self.player.duration - time_left
+            if self.pause_time_left is None:
+                time_left = round(self.song_end_time - time.time())
+                current_dur = self.player.duration - time_left
+            else:
+                #time_left = round(self.player.duration - self.pause_time_left)
+                current_dur = self.player.duration - self.pause_time_left
             
             # split current_dir int h,m,s
             m, s = divmod(current_dur, 60)
@@ -382,6 +399,9 @@ class MusicPlayer():
                 msg = "{0.mention}, :arrow_forward: The current song is **{1} [{2:02d}:{3:02d}:{4:02d}/{5:02d}:{6:02d}:{7:02d}]**"
             else:
                 msg = "{0.mention}, :arrow_forward: The current song is **{1} [{3:02d}:{4:02d}/{6:02d}:{7:02d}]**"
+
+            if self.pause_time_left is not None:
+                msg += ' *PAUSED*'
             
             await self.bot.send_message(message.channel, msg.format(message.author, self.player.title, h, m, s, dh, dm, ds))
 
@@ -391,41 +411,78 @@ class MusicPlayer():
         if len(self.queue) < 2:
             await self.bot.send_message(message.channel, '{0.mention}, There are no songs in the queue'.format(message.author))
         elif len(self.queue) == 2:
-            time_left = round(self.song_end_time - time.time())
-            m, s = divmod(time_left, 60)
-            h, m = divmod(m, 60)
+            if self.pause_time_left is None:
+                time_left = round(self.song_end_time - time.time())
+                m, s = divmod(time_left, 60)
+                h, m = divmod(m, 60)
 
-            if h != 0:
-                msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {2:02d}:{3:02d}:{4:02d}s"
+                if h != 0:
+                    msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {2:02d}:{3:02d}:{4:02d}s"
+                else:
+                    msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {3:02d}:{4:02d}s"
+                await self.bot.send_message(message.channel, msg.format(message.author, self.queue, h, m, s))
             else:
-                msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {3:02d}:{4:02d}s"
-            await self.bot.send_message(message.channel, msg.format(message.author, self.queue, h, m, s))
+                msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Current song is *PAUSED*"
+                await self.bot.send_message(message.channel, msg.format(message.author, self.queue))
 
         else:
-            time_left = round(self.song_end_time - time.time())
-            m, s = divmod(time_left, 60)
-            h, m = divmod(m, 60)
-            
-            if h != 0:
-                msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {2:02d}:{3:02d}:{4:02d}s\nQueue:\n```"
-            else:
-                msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {3:02d}:{4:02d}s\nQueue:\n```"
+            if self.pause_time_left is None:
+                    time_left = round(self.song_end_time - time.time())
+                    m, s = divmod(time_left, 60)
+                    h, m = divmod(m, 60)
+                    
+                    if h != 0:
+                        msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {2:02d}:{3:02d}:{4:02d}s\nQueue:\n```"
+                    else:
+                        msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {3:02d}:{4:02d}s\nQueue:\n```"
+                else:
+                    msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Current song is *PAUSED*\nQueue:\n```"
+                
+                if len(self.queue) < 7:
+                    for i in range(2, len(self.queue)):
+                        msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
+                else:
+                    for i in range(2, 6):
+                        msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
 
-            if len(self.queue) < 7:
-                for i in range(2, len(self.queue)):
-                    msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
-            else:
-                for i in range(2, 6):
-                    msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
-
-            msg = msg + '```'
-            await self.bot.send_message(message.channel, msg.format(message.author, self.queue, h, m, s))
+                msg = msg + '```'
+                if self.pause_time_left is None:
+                    await self.bot.send_message(message.channel, msg.format(message.author, self.queue, h, m, s))
+                else:
+                    await self.bot.send_message(message.channel, msg.format(message.author, self.queue))
 
     async def clearQueue(self, message):
         ''' Clear the queue '''
         if self.checkAdmin(message.author) or self.checkApproved(message.author):
             del(self.queue[1:])
             await self.bot.send_message(message.channel, "{0.mention}, The queue has been cleared!!".format(message.author))
+        else:
+            await self.bot.send_message(message.channel, 'Sorry {0.mention}, You need to have the manage server permission or be approved to use this command!'.format(message.author))
+
+    async def pauseMusic(self, message):
+        ''' Pauses the music '''
+        
+        if self.checkAdmin(message.author) or self.checkApproved(message.author):
+            if self.player is not None:
+                self.player.pause()
+                self.pause_time_left = round(self.song_end_time - time.time())
+                await self.bot.send_message(message.channel, ':pause_button: **{0}** is now paused'.format(self.player.title))
+            else:
+                await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be paused'.format(message.author))
+        else:
+            await self.bot.send_message(message.channel, 'Sorry {0.mention}, You need to have the manage server permission or be approved to use this command!'.format(message.author))
+
+    async def resumeMusic(self, message):
+        ''' Resume the music '''
+
+        if self.checkAdmin(message.author) or self.checkApproved(message.author):
+            if self.player is not None:
+                self.song_end_time = time.time() + self.pause_time_left
+                self.pause_time_left = None
+                self.player.resume()
+                await self.bot.send_message(message.channel, ':arrow_forward:  **{0}** is now playing'.format(self.player.title))
+            else:
+                await self.bot.send_message(message.channel, '{0.mention}, There is nothing paused'.format(message.author))
         else:
             await self.bot.send_message(message.channel, 'Sorry {0.mention}, You need to have the manage server permission or be approved to use this command!'.format(message.author))
 
@@ -571,6 +628,34 @@ class music():
         # Check if there is a music player
         if message.server.id in self.musicplayers:
             await self.musicplayers[message.server.id].clearQueue(message)
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @commands.command(no_pm=True, pass_context=True)
+    async def pause(self, ctx):
+        ''' Pause Command '''
+
+        message = ctx.message
+        if not 'music' in message.channel.name.lower():
+            await self.bot.send_message(message.channel, 'Music text channel command only')
+            return
+        # Check if there is a music player
+        if message.server.id in self.musicplayers:
+            await self.musicplayers[message.server.id].pauseMusic(message)
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @commands.command(no_pm=True, pass_context=True)
+    async def resume(self, ctx):
+        ''' Resume Command '''
+
+        message = ctx.message
+        if not 'music' in message.channel.name.lower():
+            await self.bot.send_message(message.channel, 'Music text channel command only')
+            return
+        # Check if there is a music player
+        if message.server.id in self.musicplayers:
+            await self.musicplayers[message.server.id].resumeMusic(message)
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
