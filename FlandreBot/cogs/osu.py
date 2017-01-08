@@ -40,7 +40,7 @@ class osu():
             if 'osu.ppy.sh/b/' in word:
                 osu_link = word
                 beatmapSet = False
-                mode = osu_link.split('&m=')[1]
+                mode = osu_link.split('m=')[1]
             elif 'osu.ppy.sh/s/' in word:
                 osu_link = word
                 beatmapSet = True
@@ -85,7 +85,7 @@ class osu():
                 ar = float(data[0]['diff_approach'])
                 hp = float(data[0]['difficultyrating'])
 
-                if int(mode) is 0:
+                if int(data[0]['mode']) is 0:
                     # Get beatmap for PP 
                     with aiohttp.ClientSession() as aioclient:
                         async with aioclient.get('http://osu.ppy.sh/osu/' + mapID) as resp:
@@ -120,7 +120,7 @@ class osu():
                         'AR: {7:.2f}\n'
                         'HP: {8:.2f}\n'
                         )
-                if int(mode) is 0:
+                if int(data[0]['mode']) is 0:
                     desc += 'PP: {9} with {10} ({11})'
                     embed = Embed(type='rich', description=desc.format(data, rank, m, s, stars, cs, od, ar, hp, pp, mods, percent), colour=colour)
                 else:
