@@ -97,7 +97,6 @@ class nsfw:
                     embed = Embed(type='rich', colour=colour)
                     embed.set_image(url=image['@file_url'])
                     embed.set_author(name='Gelbooru', url=post_url.format(image['@id']))
-                    embed.set_footer(text='I <3 maware')
                     await self.bot.send_message(message.channel, embed=embed)
                 except KeyError:
                     await self.bot.send_message(message.channel, '{0.mention}, Sorry I couldn\'t get the url for the image I found'.format(message.author))
@@ -143,7 +142,6 @@ class nsfw:
                 embed = Embed(type='rich', colour=colour)
                 embed.set_image(url='http://danbooru.donmai.us' + data[0]['file_url'])
                 embed.set_author(name='Danbooru', url=post_url.format(data[0]['id']))
-                embed.set_footer(text='I <3 maware')
                 await self.bot.send_message(message.channel, embed=embed)
             except KeyError:
                     await self.bot.send_message(message.channel, '{0.mention}, Sorry I couldn\'t get the url for the image I found'.format(message.author))
@@ -187,7 +185,6 @@ class nsfw:
                 embed = Embed(type='rich', colour=colour)
                 embed.set_image(url="https://" + data[0]['file_url'][2:])
                 embed.set_author(name='Konachan', url=post_url.format(data[0]['id']))
-                embed.set_footer(text='I <3 maware')
                 await self.bot.send_message(message.channel, embed=embed)
             except KeyError:
                     await self.bot.send_message(message.channel, '{0.mention}, Sorry I couldn\'t get the url for the image I found'.format(message.author))
@@ -233,7 +230,6 @@ class nsfw:
                 embed = Embed(type='rich', colour=colour)
                 embed.set_image(url=data[0]['file_url'])
                 embed.set_author(name='Yandere', url=post_url.format(data[0]['id']))
-                embed.set_footer(text='I <3 maware')
                 await self.bot.send_message(message.channel, embed=embed)
             except KeyError:
                     await self.bot.send_message(message.channel, '{0.mention}, Sorry I couldn\'t get the url for the image I found'.format(message.author))

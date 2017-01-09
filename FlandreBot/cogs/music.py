@@ -435,21 +435,21 @@ class MusicPlayer():
                         msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {2:02d}:{3:02d}:{4:02d}s\nQueue:\n```"
                     else:
                         msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Plays in {3:02d}:{4:02d}s\nQueue:\n```"
-                else:
-                    msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Current song is *PAUSED*\nQueue:\n```"
-                
-                if len(self.queue) < 7:
-                    for i in range(2, len(self.queue)):
-                        msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
-                else:
-                    for i in range(2, 6):
-                        msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
+            else:
+                msg = "{0.mention}, The next song is **{1[1][title]}** and it was requested by **{1[1][user]}**. Current song is *PAUSED*\nQueue:\n```"
+            
+            if len(self.queue) < 7:
+                for i in range(2, len(self.queue)):
+                    msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
+            else:
+                for i in range(2, 6):
+                    msg = msg + str((i-1)) + ": " + self.queue[i]['title'] + " - Requested by " + self.queue[i]['user'] + "\n"
 
-                msg = msg + '```'
-                if self.pause_time_left is None:
-                    await self.bot.send_message(message.channel, msg.format(message.author, self.queue, h, m, s))
-                else:
-                    await self.bot.send_message(message.channel, msg.format(message.author, self.queue))
+            msg = msg + '```'
+            if self.pause_time_left is None:
+                await self.bot.send_message(message.channel, msg.format(message.author, self.queue, h, m, s))
+            else:
+                await self.bot.send_message(message.channel, msg.format(message.author, self.queue))
 
     async def clearQueue(self, message):
         ''' Clear the queue '''
