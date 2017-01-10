@@ -163,7 +163,7 @@ class osu():
                     AccValue = pow((150 / ODW) * pow(int(percent[:-1])/100,16),1.8)*2.5*min(1.15,pow(maxcombo/1500,0.3))
                     StrainBase = pow(5 * max(1, stars/0.0825) - 4, 3)/ 110000 * (1 + 0.1 * min(maxcombo/1500, 1))
                     StrainMult = 1
-                    pp = str(pow(pow(AccValue,1.1) + pow(StrainBase * StrainMult, 1.1), (1/1.1)) * 1.1) + 'pp'
+                    pp = '{0:.2f}pp'.format(pow(pow(AccValue,1.1) + pow(StrainBase * StrainMult, 1.1), (1/1.1)) * 1.1)
 
                 else:
                     # osu! ctb or taiko
@@ -197,7 +197,7 @@ class osu():
                     if not unsure:
                         osuembed.add_field(name='PP', value='{0} with {1} ({2}).'.format(pp, mods, percent))
                     else:
-                        osuembed.add_field(name='PP', value='{0} with {1} ({2}). Max Combo is null in osu api (based on 1500 combo)'.format(pp, mods, percent))
+                        osuembed.add_field(name='PP', value='{0} with {1} ({2}).\nMax Combo is null in osu api (based on 1500 combo)'.format(pp, mods, percent))
                 
                 osuembed.set_footer(text='Mode: {0}'.format(self.modes[data[0]['mode']]))
 
