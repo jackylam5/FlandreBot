@@ -211,7 +211,8 @@ class osu():
     async def on_osu_message(self, message):
         ''' Check if beatmap was sent '''
         if '/osu.ppy.sh/s/' in message.content.lower() or '/osu.ppy.sh/b/' in message.content.lower():
-            await self.getBeatmap(message)
+            if message.author != self.bot.user and not message.author.bot:
+                await self.getBeatmap(message)
 
 def setup(bot):
     n = osu(bot)
