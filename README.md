@@ -1,4 +1,4 @@
-# FLANDEREBOT
+# FLANDREBOT
 A Discord bot written by [jackylam5](https://github.com/jackylam5) and [Maware](https://github.com/Ma-wa-re) (For some bits).
 Always a WIP
 
