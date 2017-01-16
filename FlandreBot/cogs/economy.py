@@ -241,7 +241,7 @@ class economy:
             place += 1
         if highscore:
             if len(highscore) < 1985:
-                await self.bot.say("```py\n"+highscore+"```")
+                await self.bot.say("```markdown\n"+highscore+"```")
             else:
                 await self.bot.say("The leaderboard is too big to be displayed. Try with a lower <top> parameter.")
         else:
