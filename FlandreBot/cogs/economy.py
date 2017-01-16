@@ -390,82 +390,56 @@ class economy:
         line[2] = reels[2][1]
         
         
-        display_reels = "  " + reels[0][0] + " " + reels[1][0] + " " + reels[2][0] + "\n"
+        display_reels = "" + reels[0][0] + " " + reels[1][0] + " " + reels[2][0] + "\n"
         display_reels += ">" + reels[0][1] + " " + reels[1][1] + " " + reels[2][1] + "<\n"
-        display_reels += "  " + reels[0][2] + " " + reels[1][2] + " " + reels[2][2] + "\n"
+        display_reels += "" + reels[0][2] + " " + reels[1][2] + " " + reels[2][2] + "\n"
         
         bidnow = bid
+        lose = False
         
         if line[0] == ":seven:" and line[1] == ":seven:" and line[2] == ":seven:":
             bid = bid * 777
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
         elif line[0] == ":seven:" and line[1] == ":seven:" or line[1] == ":seven:" and line[2] == ":seven:" or line[0] == ":seven:" and line[2] == ":seven:":
-            bid = bid * 77
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 77           
         elif line[0] == ":gem:" and line[1] == ":gem:" and line[2] == ":gem:":
-            bid = bid * 100
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 100            
         elif line[0] == ":gem:" and line[1] == ":gem:" or line[1] == ":gem:" and line[2] == ":gem:" or line[0] == ":gem:" and line[2] == ":gem:":
-            bid = bid * 25
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 25            
         elif line[0] == ":strawberry:" and line[1] == ":strawberry:" and line[2] == ":strawberry:":
-            bid = bid * 20
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 20           
         elif line[0] == ":grapes:" and line[1] == ":grapes:" and line[2] == ":grapes:":
-            bid = bid * 30
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 30            
         elif line[0] == ":tomato:" and line[1] == ":tomato:" and line[2] == ":tomato:":
-            bid = bid * 40
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 40            
         elif line[0] == ":watermelon:" and line[1] == ":watermelon:" and line[2] == ":watermelon:":
-            bid = bid * 35
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 35            
         elif line[0] == ":lemon:" and line[1] == ":lemon:" and line[2] == ":lemon:":
-            bid = bid * 25
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 25            
         elif line[0] == ":tangerine:" and line[1] == ":tangerine:" and line[2] == ":tangerine:":
-            bid = bid * 15
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 15            
         elif line[0] == ":cherries:" and line[1] == ":cherries:" and line[2] == ":cherries:":
-            bid = bid * 10
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 10            
         elif line[0] == ":cherries:" and line[1] == ":cherries:" or line[1] == ":cherries:" and line[2] == ":cherries:" or line[0] == ":cherries:" and line[2] == ":cherries:":
-            bid = bid * 5
-            self.add_money(message.author.id, bid)
-            self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
+            bid = bid * 5            
         elif line[0] == ":cherries:" or line[1] == ":cherries:" or line[2] == ":cherries:":
             bid = bid * 2
+        else:
+            lose = True
+
+        embed = discord.Embed(type='rich', colour=discord.Colour(16776960))
+        embed.add_field(name='Reel', value=display_reels, inline=False)
+        embed.add_field(name='Amount Entered', value='{0:,}'.format(bidnow), inline=False)
+        
+        if lose:
+            self.withdraw_money(message.author.id, bid)            
+            embed.add_field(name='Amount Won', value='0 Coins. Better luck next time!', inline=False)
+        else:
             self.add_money(message.author.id, bid)
             self.withdraw_money(message.author.id, bidnow)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... won {} Coins! Gratz! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(bid), str(self.check_balance(message.author.id))))
-        else:
-            self.withdraw_money(message.author.id, bid)
-            await self.bot.send_message(message.channel, "{}{} inserts {} Coin(s) and... Didn't win anything. Better luck next time! \n Coin(s) left: {}".format(display_reels, message.author.mention, str(bidnow), str(self.check_balance(message.author.id))))
-            return True
+            embed.add_field(name='Amount Won', value='{0:,} Coins!'.format(bid), inline=False)
 
+        embed.add_field(name='Coin(s) Left', value='{0:,}'.format(self.check_balance(message.author.id)), inline=False)
+        await self.bot.send_message(message.channel, embed=embed)
     
     
     @commands.group(name="hl", pass_context=True)
