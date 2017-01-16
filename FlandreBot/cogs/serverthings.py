@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from FlandreBot.utils.IO import files
 from FlandreBot.utils import permissions
+from discord import Game
 import os
 import time
 import json
@@ -12,6 +13,45 @@ class serverthings:
     def __init__(self, bot):
         self.bot = bot
         self.welcome = files("FlandreBot/data/serverthings/welcome.json", "load")
+        self.settings = files("FlandreBot/config.json", "load")
+    
+    @commands.group(name="set", pass_context=True)
+    @permissions.checkOwner()
+    async def _set(self, ctx):
+        """Bot settings"""
+        if ctx.invoked_subcommand is None:
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
+                
+    @_set.command(pass_context=True)
+    async def prefix(self, ctx, prefix : str):
+        """Change bot's prefix"""
+        if prefix != None:
+            self.bot.command_prefix = prefix
+            self.settings["prefix"] = prefix
+            files("FlandreBot/config.json", "save", self.settings)
+            await self.bot.say("Changed prefix!")
+            
+    @_set.command(pass_context=True)
+    async def game(self, ctx, playing : str):
+        """Change game of bot"""
+        if playing != None:
+            if playing == "None":
+                await self.bot.change_presence(game=None, status=None)
+                await self.bot.say("changed game!")
+                self.settings["game"] = ""
+            else:
+                await self.bot.change_presence(game=Game(name=playing), status=None)
+                await self.bot.say("changed game!")
+                self.settings["game"] = playing
+
+    @_set.command(pass_context=True)
+    async def name(self, ctx, name : str):
+        """Change nickname of bot"""
+        if name != None:
+            await self.bot.change_nickname(ctx.message.server.me, name)
+            await self.bot.say("Changed my nickname!")
     
     @commands.group(name="wm", pass_context=True, no_pm=True)
     @permissions.checkAdmin()

@@ -6,6 +6,7 @@ Handles all discord events such as:
     - Member joins a server
 '''
 import discord
+from discord import Game
 import json
 import logging
 from discord.ext import commands
@@ -59,7 +60,9 @@ class BOT(commands.Bot):
     async def on_ready(self):
         ''' When bot has fully logged on '''
         print('[*] Logged in as: {0.user.name} ({0.user.id}).'.format(self))
-        self.logger.info('Logged in as: {0.user.name} ({0.user.id})'.format(self))     
+        self.logger.info('Logged in as: {0.user.name} ({0.user.id})'.format(self))   
+        if self.config['game'] != "":
+            await self.change_presence(game=Game(name=self.config['game']), status=None)        
         owd = os.getcwd()
         os.chdir("FlandreBot/cogs")
         for file in glob.glob("*.py"):
