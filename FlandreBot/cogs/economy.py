@@ -251,11 +251,12 @@ class economy:
             await self.bot.say("There are no accounts in the bank.")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def slot(self, ctx, bid : int):
+    async def slot(self, ctx, bid : str):
         """Play the slot machine"""
         if ctx.message.channel.name == "gambling":
             author = ctx.message.author
             message = ctx.message
+            bid = int(bid.replace(',', ''))
             if self.enough_money(author.id, bid):
                 if bid >= self.settings["SLOT_MIN"]:
                     if author.id in self.slot_register:
