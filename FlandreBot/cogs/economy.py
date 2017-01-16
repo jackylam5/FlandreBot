@@ -211,16 +211,15 @@ class economy:
         highscore = ""
         place = 1
 
-        for id in topten:
-            highscore += str(place).ljust(len(str(top))+1)
-            highscore += (id[1]["name"]+" ").ljust(23-len(str(id[1]["balance"])))
-            highscore += str(id[1]["balance"]) + "\n"
-            place += 1
-        if highscore:
-            if len(highscore) < 1985:
-                await self.bot.say("```py\n"+highscore+"```")
-            else:
-                await self.bot.say("The leaderboard is too big to be displayed. Try with a lower <top> parameter.")
+        if topten:
+            for id in topten:
+                highscore += '[{0}]: [{1}]({2})\n'.format(place, id[1]["name"], id[1]["balance"])
+                place += 1
+            if highscore:
+                if len(highscore) < 1985:
+                    await self.bot.say("```markdown\n"+highscore+"```")
+                else:
+                    await self.bot.say("The leaderboard is too big to be displayed. Try with a lower <top> parameter.")
         else:
             await self.bot.say("There are no accounts in the bank.")
     
@@ -238,9 +237,7 @@ class economy:
         highscore = ""
         place = 1   
         for id in topten:
-            highscore += str(place).ljust(len(str(top))+1)
-            highscore += (id[1]["name"]+" ").ljust(23-len(str(id[1]["totalsc"])))
-            highscore += str(id[1]["totalsc"]) + "\n"
+            highscore += '[{0}]: [{1}]({2})\n'.format(place, id[1]["name"], id[1]["totalsc"])
             place += 1
         if highscore:
             if len(highscore) < 1985:
