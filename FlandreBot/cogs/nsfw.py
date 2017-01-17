@@ -6,6 +6,7 @@ import random
 import re
 import json
 from discord import Embed, Colour, utils
+from bs4 import BeautifulSoup
 
 botchannelname = {"bot"}
 
@@ -236,6 +237,60 @@ class nsfw:
         else:
             await self.bot.send_message(message.channel, '{0.mention}, Nothing found with the tag(s) supplied.'.format(message.author))
     
+    @commands.command(pass_context=True)
+    async def sankaku(self, ctx, *tags):
+        ''' Search pictures on sankaku complex
+        This command might take a while to get an image
+        It is also not formatted nicely due to image not going in embed
+        '''
+
+        message = ctx.message
+        base_url = 'https://chan.sankakucomplex.com/?tags={0}'
+
+        if not self.nsfwCheck(ctx):
+            await self.bot.say('{} please use nsfw channels for this'.format(message.author.mention))
+            return
+
+        linktags = "order:random"
+        
+        if len(tags) > 0:
+            
+            for p in tags:
+                replaced = re.sub(' ', '_', str(p))
+                linktags = linktags + "+" + str(replaced)
+
+        # Get webpage to pick image
+        with aiohttp.ClientSession() as aioclient:
+            async with aioclient.get(base_url.format(linktags), headers={'User-Agent': 'Googlebot-Image/1.0'}) as resp:
+                data = await resp.text()
+
+        # Open webpage with bs4
+        soup = BeautifulSoup(data, 'html.parser')
+        images = soup.find_all('img', {'class': 'preview'})
+        if len(images) != 0:
+            image = random.choice(images)
+            post_url = 'https://chan.sankakucomplex.com' + image.parent['href']        
+             # Get image
+            with aiohttp.ClientSession() as aioclient:
+                async with aioclient.get(post_url, headers={'User-Agent': 'Googlebot-Image/1.0'}) as resp:
+                    data = await resp.text()
+
+            soup = BeautifulSoup(data, 'html.parser')
+            bigimage = soup.find_all('img', {'id': 'image'})
+            image_url = 'https:' + bigimage[0]['src']
+
+            try:
+                #colour = Colour(15839969)
+                #embed = Embed(type='rich', colour=colour)
+                #embed.set_image(url=image_url)
+                #embed.set_author(name='Sankaku', url=post_url)
+                await self.bot.send_message(message.channel, image_url)
+            except KeyError:
+                await self.bot.send_message(message.channel, '{0.mention}, Sorry I couldn\'t get the url for the image I found'.format(message.author))
+        else:
+            await self.bot.send_message(message.channel, '{0.mention}, Nothing found with the tag(s) supplied.'.format(message.author))
+
+
     def loadConfig(self):
         ''' Load the config from the config.json file '''
         try:
