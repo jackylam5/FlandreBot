@@ -80,13 +80,13 @@ class economy:
             if not user:
                 user = ctx.message.author
                 if self.account_check(user.id):
-                    await self.bot.say("{} Your balance is: {}".format(user.mention, str(self.check_balance(user.id))))
+                    await self.bot.say("{0} Your balance is: {1:,}".format(user.mention, str(self.check_balance(user.id))))
                 else:
                     await self.bot.say("{} You don't have an account at the Scrub bank. Type {}bank register to open one.".format(user.mention, ctx.prefix))
             else:
                 if self.account_check(user.id):
                     balance = self.check_balance(user.id)
-                    await self.bot.say("{}'s balance is {}".format(user.name, str(balance)))
+                    await self.bot.say("{0}'s balance is {1:,}".format(user.name, str(balance)))
                 else:
                     await self.bot.say("That user has no bank account.")
         else:
