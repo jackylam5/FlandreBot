@@ -7,6 +7,7 @@ import re
 import json
 from discord import Embed, Colour, utils
 from bs4 import BeautifulSoup
+import io
 
 botchannelname = {"bot"}
 
@@ -280,11 +281,18 @@ class nsfw:
             image_url = 'https:' + bigimage[0]['src']
 
             try:
-                #colour = Colour(15839969)
-                #embed = Embed(type='rich', colour=colour)
-                #embed.set_image(url=image_url)
-                #embed.set_author(name='Sankaku', url=post_url)
-                await self.bot.send_message(message.channel, image_url)
+                # Get webpage to pick image
+                with aiohttp.ClientSession() as aioclient:
+                    async with aioclient.get(image_url, headers={'User-Agent': 'Googlebot-Image/1.0'}) as resp:
+                        data = await resp.read()
+
+                image_io = io.BytesIO(data)
+                image_io.seek(0)
+                ext = bigimage[0]['src'].split('.')[-1].split('?')[0]
+
+                await self.bot.send_file(message.channel, fp=image_io, filename='sankaku.{0}'.format(ext))
+                image_io.close()
+                del image_io
             except KeyError:
                 await self.bot.send_message(message.channel, '{0.mention}, Sorry I couldn\'t get the url for the image I found'.format(message.author))
         else:
