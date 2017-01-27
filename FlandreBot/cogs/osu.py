@@ -2,6 +2,7 @@ import aiohttp
 from subprocess import PIPE, STDOUT, Popen
 from discord import Embed, Colour
 import re
+import math
 
 class osu():
     ''' osu! commands 
@@ -25,6 +26,10 @@ class osu():
         words = message.content.split(' ')
         mods = ''
         percent = ''
+        score = ''
+        sr = ''
+        comb = ''
+        mis = ''
         url = None
 
         for word in words:
@@ -45,31 +50,120 @@ class osu():
             
             elif '%' in word:
                 percent = word   
+                
+            elif 'sr' in word.lower():
+                sr = word
+            
+            elif 'score' in word.lower() or 'sc' in word.lower():
+                score = word
+        
+            elif 'combo' in word.lower() or 'c' in word.lower():
+                comb = word
+        
+            elif 'miss' in word.lower() or 'm' in word.lower():
+                mis = word
+        
+        #custom starrating (for DT)
+        counter = 0
+        doneCounting = False
+        srtext = ''
+                
+        for char in sr:
+            try:
+                if char == '.':
+                    doneCounting = True
+                checkchar = int(char)
+                srtext = srtext + str(checkchar)
+                if doneCounting:
+                    counter += 1
+            except:
+                pass
+        
+        srcalc = 0
+        if srtext != '':
+            if doneCounting:
+                counter = pow(10, counter)
+                srcalc = int(srtext)/counter
+            else:
+                srcalc = int(srtext)
+            
+        #custom score (mania only)
+        scoretext = ''
+        for char in score:
+            try:
+                checkchar = int(char)
+                scoretext = scoretext + str(checkchar)
+            except:
+                pass
+        
+        score = 1000000
+        
+        if scoretext != '':
+            scorecalc = int(scoretext)
+            if scorecalc > 0 and scorecalc < 1000000:
+                score = scorecalc
+        
+            
         
         #fix percent
         acctext = ''
         getacc = percent + mods
+        counter = 0
+        doneCounting = False
         
         for char in getacc:
             try:
+                if char == '.':
+                    doneCounting = True
                 checkchar = int(char)
                 acctext = acctext + str(checkchar)
+                if doneCounting:
+                    counter += 1
             except:
                 pass
-                
         
+        acccalc = 100
         if acctext != '':
-            accnumber = int(acctext)
-            if percent != '100%':
-                if accnumber < 0:
-                    percent = '0%'
-                elif accnumber > 100:
-                    percent = '100%'
-                else:
-                    percent = acctext + '%'
+            if doneCounting:
+                counter = pow(10, counter)
+                acccalc = int(acctext)/counter
+            else:
+                acccalc = int(acctext)
+                
+        if acccalc > 0 and acccalc < 100:               
+            percent = str(acccalc) + '%'
         else:
             percent = '100%'
-            
+        
+        #get combo
+        
+        combo = 0
+        combotext = ''
+        for char in comb:
+            try:
+                checkchar = int(char)
+                combotext = combotext + str(checkchar)
+            except:
+                pass
+        
+        if combotext != '':
+            combo = int(combotext)
+        
+        #get miss
+        
+        misstext = ''
+        for char in mis:
+            try:
+                checkchar = int(char)
+                misstext = misstext + str(checkchar)
+            except:
+                pass
+        
+        miss = 0
+        if misstext != '':
+            miss = int(misstext)
+        
+        #get mods
         if '+' + percent == mods:
             mods = ''
         
@@ -123,14 +217,21 @@ class osu():
             else:
                 # BeatMap
                 # Get stars and max combo (set to 1500 if not found)
-                stars = float(data[0]['difficultyrating'])
-                maxcombo = 1500
-                unsure = False
-                try:
-                    maxcombo = int(data[0]['max_combo'])
-                except:
-                    unsure = True
+                stars = 0
+                if srcalc == 0:
+                    stars = float(data[0]['difficultyrating'])
+                else:
+                    stars = srcalc
                 
+                unsure = False
+                if combo == 0:
+                    maxcombo = 1500
+                    try:
+                        maxcombo = int(data[0]['max_combo'])
+                    except:
+                        unsure = True
+                else:
+                    maxcombo = combo
                 # Get cs, od , ar and hp 
                 cs = float(data[0]['diff_size'])
                 od = float(data[0]['diff_overall'])
@@ -155,18 +256,72 @@ class osu():
                     del beatmap
                     pp = stdout.decode().split('\n')[-2].strip()
                 
+                elif data[0]['mode'] is '1':
+                    # osu! Taiko
+                    # Calculate pp
+                    
+                    if 'HR' in mods:
+                        od = od * 1.4
+                    
+                    odround = math.floor(od)
+                    oddec = od - odround
+
+                    ODW = 49.5 - (3*odround)
+                    
+                    if oddec > 0 and oddec < 0.34:
+                        ODW = ODW - 1
+                    elif oddec >= 0.34 and oddec < 0.67:
+                        ODW = ODW - 2
+                    elif oddec >=0.67:
+                        ODW = ODW - 3
+                        
+                    if 'DT' in mods:
+                        ODW = ODW / 1.5
+                    
+                    acccalc = acccalc/100
+                    strainValue = pow(5 * max(1, stars/0.0075) - 4, 2) / 100000 * 1 * (1 + 0.1 * min(maxcombo/1500, 1)) * pow(0.985, miss) * acccalc * min(pow(maxcombo-miss,0.5) / pow(maxcombo, 0.5), 1)
+                    if 'HD' in mods:
+                        strainValue = strainValue * 1.025
+                    if 'FL' in mods:
+                        strainValue = strainValue * 1.05 * 1 * (1 + 0.1 * min(maxcombo/1500, 1))
+                    accValue = pow(150 / ODW, 1.1) * pow(acccalc, 15) * 22 * min(1.15, pow(maxcombo / 1500, 0.3))
+                    
+                    totalValue = pow(pow(strainValue, 1.1) + pow(accValue, 1.1) , (1/1.1)) * 1.1
+                    
+                    if 'NF' in mods:
+                        totalValue = totalValue * 0.9
+                    if 'HD' in mods:
+                        totalValue = totalValue * 1.1
+                        
+                    pp = '{0:.2f}pp'.format(totalValue)
+
+                
                 elif data[0]['mode'] is '3':
                     # osu! Mania                       
                     # Calculate pp
                     
                     ODW = 64 - (3 * od)
-                    AccValue = pow((150 / ODW) * pow(int(percent[:-1])/100,16),1.8)*2.5*min(1.15,pow(maxcombo/1500,0.3))
+                    AccValue = pow((150 / ODW) * pow(acccalc/100,16),1.8)*2.5*min(1.15,pow(maxcombo/1500,0.3))
                     StrainBase = pow(5 * max(1, stars/0.0825) - 4, 3)/ 110000 * (1 + 0.1 * min(maxcombo/1500, 1))
-                    StrainMult = 1
+                    
+                    StrainMult = 0
+                    if score <= 500000:
+                        StrainMult = 0;
+                    elif score > 500000 and score <= 600000:
+                        StrainMult = (score - 500000)/ 100000 * 0.3
+                    elif score > 600000 and score <= 700000:
+                        StrainMult = 0.3 + (score - 600000) / 100000 * 0.35
+                    elif score > 700000 and score <= 800000:
+                        StrainMult = 0.65 + (score - 700000) / 100000 * 0.2
+                    elif score > 800000 and score <= 900000:
+                        StrainMult = 0.85 + (score - 800000) / 100000 * 0.1
+                    else:
+                        StrainMult = 0.95 + (score - 900000) / 100000 * 0.05
+                        
                     pp = '{0:.2f}pp'.format(pow(pow(AccValue,1.1) + pow(StrainBase * StrainMult, 1.1), (1/1.1)) * 1.1)
 
                 else:
-                    # osu! ctb or taiko
+                    # osu! ctb
                     pp = None 
                 
                 if mods != '':
@@ -191,14 +346,20 @@ class osu():
                 osuembed.add_field(name='OD', value='{0:.2f}'.format(od))
                 osuembed.add_field(name='AR', value='{0:.2f}'.format(ar))
                 osuembed.add_field(name='HP', value='{0:.2f}'.format(hp))
-
+                if data[0]['mode'] is '3':
+                    osuembed.add_field(name='Score', value='{}'.format(score))
+                elif data[0]['mode'] is '1':
+                    osuembed.add_field(name='Miss', value='{}'.format(miss))
                 # Check for pp
                 if pp is not None:
                     if not unsure:
                         osuembed.add_field(name='PP', value='{0} with {1} ({2}).'.format(pp, mods, percent))
                     else:
-                        osuembed.add_field(name='PP', value='{0} with {1} ({2}).\nMax Combo is null in osu api (based on 1500 combo)'.format(pp, mods, percent))
-                
+                        osuembed.add_field(name='PP', value='{0} with {1} ({2}).'.format(pp, mods, percent))
+                        osuembed.add_field(name='Note', value='Max Combo is null in osu api (based on 1500 combo).\nPlease add max combo behind the link for example: C1337'.format(pp, mods, percent))
+                    
+                    if 'DT' in mods:
+                        osuembed.add_field(name='About DT', value='Please add star rating behind the link for example: SR5.63.')
                 osuembed.set_footer(text='Mode: {0}'.format(self.modes[data[0]['mode']]))
 
             # Set thumbnail to map background and title to map name 
