@@ -8,3 +8,4 @@ Always a WIP
 - [oppai](https://github.com/Francesco149/oppai)
 - [xmltodict](https://github.com/martinblech/xmltodict)
 - [CleverBot](https://github.com/folz/cleverbot.py)
+- [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/)
