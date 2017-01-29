@@ -7,3 +7,4 @@ Always a WIP
 - [youtube-dl](https://rg3.github.io/youtube-dl/)
 - [oppai](https://github.com/Francesco149/oppai)
 - [xmltodict](https://github.com/martinblech/xmltodict)
+- [CleverBot](https://github.com/folz/cleverbot.py)
