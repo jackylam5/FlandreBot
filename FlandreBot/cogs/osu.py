@@ -255,11 +255,13 @@ class osu():
                     proc.kill()
                     del beatmap
                     pp = stdout.decode().split('\n')[-2].strip()
+                    
+                    await self.bot.send_message(message.channel, stdout.decode())
                 
                 elif data[0]['mode'] is '1':
                     # osu! Taiko
                     # Calculate pp
-                    
+
                     if 'HR' in mods:
                         od = od * 1.4
                     
@@ -295,6 +297,40 @@ class osu():
                         
                     pp = '{0:.2f}pp'.format(totalValue)
 
+                elif data[0]['mode'] is '2':
+
+                    # osu! std
+                    # Get beatmap for PP 
+                    with aiohttp.ClientSession() as aioclient:
+                        async with aioclient.get('http://osu.ppy.sh/osu/' + mapID) as resp:
+                            beatmap = await resp.read()
+
+                    # Use oppai to get pp
+                    if mods != '':
+                        proc = Popen(['./oppaictb', '-', mods, percent], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+                    else:
+                        proc = Popen(['./oppaictb', '-', percent], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+                    
+                    stdout, stderr = proc.communicate(beatmap)
+                    proc.kill()
+                    del beatmap
+                    
+                    await self.bot.send_message(message.channel, stdout.decode())
+                    
+                    acccalc = 99.96/100
+                    aimValue = 187.742
+                    #aimValue = pow(5 * max(1, aim/0.0049) - 4, 2) / 100000
+                    maxcombo = 2174
+                    lengthBonus = 0.95 + 0.4 * max(1, maxcombo/3000)
+                    AR = 9.5
+                    ARValue = 1 + 0.1 * (AR-0.5)
+                    accValue = pow(acccalc, 5.5)
+                    
+                    aimTotal = aimValue * lengthBonus * ARValue
+                    
+                    await self.bot.send_message(message.channel, aimValue)
+                    
+                    pp = '{0:.2f}pp'.format(aimTotal * accValue)
                 
                 elif data[0]['mode'] is '3':
                     # osu! Mania                       

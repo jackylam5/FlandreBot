@@ -151,7 +151,7 @@ class serverthings:
                 await self.bot.send_message(ctx.message.channel, page)
     
     @_clever.command(pass_context=True, no_pm=True)
-    async def allow(self, ctx, *text : str): 
+    async def allow(self, ctx): 
         """allow server for talking to bot"""
         server = ctx.message.server
         channel = ctx.message.channel
@@ -165,7 +165,7 @@ class serverthings:
             await self.bot.say("server removed from list")
             
     @_clever.command(pass_context=True, no_pm=True)
-    async def add(self, ctx, *text : str):         
+    async def add(self, ctx):         
         """add channel to list"""
         server = ctx.message.server
         channel = ctx.message.channel
@@ -180,7 +180,6 @@ class serverthings:
                 await self.bot.say("channel removed from list")
         else:
             await self.bot.say("server is no on the list yet")
-            
     
     def send_cmd_help(self, ctx):
         if ctx.invoked_subcommand:
