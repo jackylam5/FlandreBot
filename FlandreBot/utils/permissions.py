@@ -7,7 +7,10 @@ def checkOwnerPerm(ctx):
     try:
         with open('FlandreBot/config.json', 'r') as config:
             config = json.load(config)
-            return (user.id == config['ownerid'])
+            if user.id in config['ownerid']:
+                return True
+            else:
+                return False
     except json.decoder.JSONDecodeError:
         return False  
 
