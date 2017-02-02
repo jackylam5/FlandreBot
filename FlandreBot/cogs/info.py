@@ -255,7 +255,7 @@ class info:
             channel = self.bot.get_channel(self.currentchannel)
             if amount > 0:
                 async for x in self.bot.logs_from(channel, limit=amount):
-                    await self.bot.say('{}: {}'.format(x.author.name, x.content))
+                    await self.bot.say('{0} {1}: {2}'.format(x.timestamp, x.author.name, x.content))
                     await asyncio.sleep(0.5)
             else:
                 await self.bot.say('Please include amount of text')

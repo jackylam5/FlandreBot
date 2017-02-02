@@ -271,12 +271,13 @@ class MusicPlayer():
                             if song is not None:
                                 url = song['webpage_url']
                                 title = song['title']
+                                thumbnail = song['thumbnail']
                                 user = message.author.display_name
                                 # Make sure the video title cannot break code box in message
                                 if '`' in title:
                                     title = title.replace('`', '\'')
                                 # Add song to queue
-                                self.queue.append({'url': url, 'title': title, 'user': user})
+                                self.queue.append({'url': url, 'title': title, 'user': user, 'thumbnail': thumbnail})
                                 queued += 1
                             else:
                                 self.bot.logger.warning("Video in {0}, could not be downloaded".format(link))
@@ -285,7 +286,10 @@ class MusicPlayer():
                             msg = ':notes: Queued: **{0}**'
                             if self.pause_time_left is not None:
                                 msg += ' Current song is *PAUSED*'
-                            await self.bot.edit_message(temp_mesg, msg.format(result['entries'][0]['title']))
+                            if result['entries'] is None:
+                                await self.bot.edit_message(temp_mesg, "Video {0}, could not be downloaded".format(link))
+                            else:
+                                await self.bot.edit_message(temp_mesg, msg.format(result['entries'][0]['title']))
                         else:
                             if queued > 0:
                                 # Tell the user how many songs have been queued                 
@@ -303,12 +307,13 @@ class MusicPlayer():
                         if result is not None:
                             url = result['webpage_url']
                             title = result['title']
+                            thumbnail= result['thumbnail']
                             user = message.author.display_name
                             # Make sure the video title cannot break code box in message
                             if '`' in title:
                                 title = title.replace('`', '\'')
                             # Add isong to queue
-                            self.queue.append({'url': url, 'title': title, 'user': user})
+                            self.queue.append({'url': url, 'title': title, 'user': user, 'thumbnail': thumbnail})
 
                             # Tell the user the song has been queue
                             msg = ':notes: Queued: **{0}**'
@@ -357,10 +362,11 @@ class MusicPlayer():
                     m, s = divmod(int(self.player.duration), 60)
                     h, m = divmod(m, 60)                    
                 
-                    temp_msg = ':notes: Now Playing: **{0}** ({1:02d}:{2:02d}:{3:02d}s) Requested by **{4}**'
-
+                    np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)\nRequested by **{4}**'.format(self.queue[0]['title'], h, m, s, self.queue[0]['user']))
+                    np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+                    np.set_thumbnail(url=self.queue[0]['thumbnail'])
                     # Send the current playing title + duration and who requested it and start audio
-                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title'], h, m, s, self.queue[0]['user']))
+                    await self.bot.send_message(self.text_channel, embed=np)
                     await asyncio.sleep(1)
                     self.player.start()
                     self.song_end_time = time.time() + self.player.duration
@@ -396,14 +402,18 @@ class MusicPlayer():
             dh, dm = divmod(dm, 60)
             
             if dh != 0:
+                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]\nRequested by **{7}**'.format(self.player.title, h, m, s, dh, dm, ds, self.queue[0]['user']))
                 msg = "{0.mention}, :arrow_forward: The current song is **{1} [{2:02d}:{3:02d}:{4:02d}/{5:02d}:{6:02d}:{7:02d}]**"
             else:
-                msg = "{0.mention}, :arrow_forward: The current song is **{1} [{3:02d}:{4:02d}/{6:02d}:{7:02d}]**"
+                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{2:02d}:{3:02d}/{5:02d}:{6:02d}]\nRequested by **{7}**'.format(self.player.title, h, m, s, dh, dm, ds, self.queue[0]['user']))
 
             if self.pause_time_left is not None:
-                msg += ' *PAUSED*'
+                np.colour = discord.Colour(16711680)
+                np.set_footer(text="Paused")
             
-            await self.bot.send_message(message.channel, msg.format(message.author, self.player.title, h, m, s, dh, dm, ds))
+            np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+            np.set_thumbnail(url=self.queue[0]['thumbnail'])
+            await self.bot.send_message(message.channel, embed=np)
 
     async def showQueue(self, message):
         ''' Show the songs that will be played next '''
