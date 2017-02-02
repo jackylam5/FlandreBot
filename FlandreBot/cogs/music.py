@@ -362,8 +362,9 @@ class MusicPlayer():
                     m, s = divmod(int(self.player.duration), 60)
                     h, m = divmod(m, 60)                    
                 
-                    np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)\nRequested by **{4}**'.format(self.queue[0]['title'], h, m, s, self.queue[0]['user']))
+                    np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.queue[0]['title'], h, m, s))
                     np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+                    np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
                     np.set_thumbnail(url=self.queue[0]['thumbnail'])
                     # Send the current playing title + duration and who requested it and start audio
                     await self.bot.send_message(self.text_channel, embed=np)
@@ -402,16 +403,18 @@ class MusicPlayer():
             dh, dm = divmod(dm, 60)
             
             if dh != 0:
-                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]\nRequested by **{7}**'.format(self.player.title, h, m, s, dh, dm, ds, self.queue[0]['user']))
+                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]'.format(self.player.title, h, m, s, dh, dm, ds))
                 msg = "{0.mention}, :arrow_forward: The current song is **{1} [{2:02d}:{3:02d}:{4:02d}/{5:02d}:{6:02d}:{7:02d}]**"
             else:
-                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{2:02d}:{3:02d}/{5:02d}:{6:02d}]\nRequested by **{7}**'.format(self.player.title, h, m, s, dh, dm, ds, self.queue[0]['user']))
+                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{2:02d}:{3:02d}/{5:02d}:{6:02d}]'.format(self.player.title, h, m, s, dh, dm, ds))
 
             if self.pause_time_left is not None:
                 np.colour = discord.Colour(16711680)
-                np.set_footer(text="Paused")
+                np.set_author(name='Now Playing [PAUSED]:', url=self.queue[0]['url'])
+            else:
+                np.set_author(name='Now Playing:', url=self.queue[0]['url'])            
             
-            np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+            np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
             np.set_thumbnail(url=self.queue[0]['thumbnail'])
             await self.bot.send_message(message.channel, embed=np)
 
