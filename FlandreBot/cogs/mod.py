@@ -434,7 +434,12 @@ class Mod:
         # Get users last sent message
         messages = self.bot.messages
         messages.reverse()
-        last_message = discord.utils.get(messages, author__id=user.id)
+        while True:
+            last_message = discord.utils.get(messages, author__id=user.id)
+            if last_message.content.startswith(self.bot.config['prefix'] + "info"):
+                messages.remove(last_message)
+            else:
+                break
         del messages
 
         # Get users top role
