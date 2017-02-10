@@ -1,5 +1,6 @@
 import aiohttp
 from subprocess import PIPE, STDOUT, Popen
+from discord.ext import commands
 from discord import Embed, Colour
 import re
 import math
@@ -255,8 +256,6 @@ class osu():
                     proc.kill()
                     del beatmap
                     pp = stdout.decode().split('\n')[-2].strip()
-                    
-                    await self.bot.send_message(message.channel, stdout.decode())
                 
                 elif data[0]['mode'] is '1':
                     # osu! Taiko
@@ -396,6 +395,7 @@ class osu():
                     
                     if 'DT' in mods:
                         osuembed.add_field(name='About DT', value='Please add star rating behind the link for example: SR5.63.')
+                osuembed.add_field(name='Downloads', value='[Website](https://osu.ppy.sh/d/{0})\n[Direct](osu://dl/{0})'.format(data[0]['beatmapset_id']), inline=False)
                 osuembed.set_footer(text='Mode: {0}'.format(self.modes[data[0]['mode']]))
 
             # Set thumbnail to map background and title to map name 
