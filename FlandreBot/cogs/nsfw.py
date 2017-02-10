@@ -94,10 +94,16 @@ class nsfw:
                     image = info['posts']['post']
                 else:
                     image = random.choice(info['posts']['post'])
+                
+                imageUrl = image['@file_url']
+                
+                if 'http' not in imageUrl:
+                    imageUrl = 'http:' + image['@file_url']
+                    
                 try:
                     colour = Colour(15839969)
                     embed = Embed(type='rich', colour=colour)
-                    embed.set_image(url=image['@file_url'])
+                    embed.set_image(url=imageUrl)
                     embed.set_author(name='Gelbooru', url=post_url.format(image['@id']))
                     await self.bot.send_message(message.channel, embed=embed)
                 except KeyError:
