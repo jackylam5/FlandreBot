@@ -261,9 +261,14 @@ class osu():
                     # osu! Taiko
                     # Calculate pp
 
+                    #OD Calculation
+                    
+                    #if HR is used
+                    
                     if 'HR' in mods:
                         od = od * 1.4
                     
+                    #Get hitwindow Value of OD
                     odround = math.floor(od)
                     oddec = od - odround
 
@@ -275,20 +280,31 @@ class osu():
                         ODW = ODW - 2
                     elif oddec >=0.67:
                         ODW = ODW - 3
-                        
+                    
+                    #DT changes hitwindow
+                    
                     if 'DT' in mods:
                         ODW = ODW / 1.5
                     
+                    #get acc
                     acccalc = acccalc/100
+                    
+                    #get strainValue for pp
                     strainValue = pow(5 * max(1, stars/0.0075) - 4, 2) / 100000 * 1 * (1 + 0.1 * min(maxcombo/1500, 1)) * pow(0.985, miss) * acccalc * min(pow(maxcombo-miss,0.5) / pow(maxcombo, 0.5), 1)
+                    
+                    #Check if HD or FL is used for bonus pp
                     if 'HD' in mods:
                         strainValue = strainValue * 1.025
                     if 'FL' in mods:
                         strainValue = strainValue * 1.05 * 1 * (1 + 0.1 * min(maxcombo/1500, 1))
+                        
+                    #accValue for pp    
                     accValue = pow(150 / ODW, 1.1) * pow(acccalc, 15) * 22 * min(1.15, pow(maxcombo / 1500, 0.3))
                     
+                    #PP value
                     totalValue = pow(pow(strainValue, 1.1) + pow(accValue, 1.1) , (1/1.1)) * 1.1
                     
+                    #PP increase with some mods
                     if 'NF' in mods:
                         totalValue = totalValue * 0.9
                     if 'HD' in mods:
@@ -298,36 +314,51 @@ class osu():
 
                 elif data[0]['mode'] is '2':
 
-                    # osu! std
+                    # osu! ctb
                     # Get beatmap for PP 
-                    with aiohttp.ClientSession() as aioclient:
-                        async with aioclient.get('http://osu.ppy.sh/osu/' + mapID) as resp:
-                            beatmap = await resp.read()
 
-                    # Use oppai to get pp
-                    if mods != '':
-                        proc = Popen(['./oppaictb', '-', mods, percent], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                    else:
-                        proc = Popen(['./oppaictb', '-', percent], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+                    #get accuracy
+                    acccalc = acccalc / 100
                     
-                    stdout, stderr = proc.communicate(beatmap)
-                    proc.kill()
-                    del beatmap
+                    #Calculates Aim Value of map
+                    aimValue = pow(5 * max(1, stars/0.0049) - 4, 2) / 100000
                     
-                    await self.bot.send_message(message.channel, stdout.decode())
+                    #Bonus pp for long maps
+                    lengthBonus = 0.95 + 0.4 * min(1, maxcombo/3000)
                     
-                    acccalc = 99.96/100
-                    aimValue = 187.742
-                    #aimValue = pow(5 * max(1, aim/0.0049) - 4, 2) / 100000
-                    maxcombo = 2174
-                    lengthBonus = 0.95 + 0.4 * max(1, maxcombo/3000)
-                    AR = 9.5
-                    ARValue = 1 + 0.1 * (AR-0.5)
+                    #check if HR is used for AR increase
+                    if 'HR' in mods:
+                        ar = ar * 1.4
+                        if ar > 10:
+                            ar = 10
+                    
+                    if 'DT' in mods:
+                        ar = 5 + ((ar - 1) * 2/3)
+                        if ar > 11:
+                            ar = 11
+                    #Bonus pp for AR higher than 9 or lower than 8
+                    ARValue = 1
+                    if ar > 9:
+                        ARValue = 1 + 0.1 * (ar-9)
+                    elif ar < 8:
+                        ARValue = 1 + 0.025 * (8 - ar)
+                        
+                    #Using mods gives bonus pp
+                    bonus = 1
+                    
+                    if 'HD' in mods:
+                        bonus = bonus * 1.05 + 0.075 * (10 - min(10, ar))
+                    
+                    if 'FL' in mods:
+                        bonus = bonus * 1.35 * lengthBonus
+                        
+                    if 'NF' in mods:
+                        bonus = bonus * 0.9
+                    
+                    #pp calculation
                     accValue = pow(acccalc, 5.5)
                     
-                    aimTotal = aimValue * lengthBonus * ARValue
-                    
-                    await self.bot.send_message(message.channel, aimValue)
+                    aimTotal = aimValue * lengthBonus * ARValue * bonus
                     
                     pp = '{0:.2f}pp'.format(aimTotal * accValue)
                 
@@ -335,10 +366,16 @@ class osu():
                     # osu! Mania                       
                     # Calculate pp
                     
+                    #hitWindow of OD
                     ODW = 64 - (3 * od)
+                    
+                    #accValue for pp
                     AccValue = pow((150 / ODW) * pow(acccalc/100,16),1.8)*2.5*min(1.15,pow(maxcombo/1500,0.3))
+                    
+                    #strainBase for pp
                     StrainBase = pow(5 * max(1, stars/0.0825) - 4, 3)/ 110000 * (1 + 0.1 * min(maxcombo/1500, 1))
                     
+                    #Multiplier based on score
                     StrainMult = 0
                     if score <= 500000:
                         StrainMult = 0;
@@ -352,11 +389,12 @@ class osu():
                         StrainMult = 0.85 + (score - 800000) / 100000 * 0.1
                     else:
                         StrainMult = 0.95 + (score - 900000) / 100000 * 0.05
-                        
+                    
+                    #pp Value
                     pp = '{0:.2f}pp'.format(pow(pow(AccValue,1.1) + pow(StrainBase * StrainMult, 1.1), (1/1.1)) * 1.1)
 
                 else:
-                    # osu! ctb
+                    # non existent mode
                     pp = None 
                 
                 if mods != '':
