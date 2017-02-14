@@ -1,5 +1,5 @@
 ''' core.py
-Written by jackylam5 and maware
+Written by Scrubs (jackylam5 & maware)
 - Load config file (config.json)
 - Sets up the logger for the bot
 - Log the bot on
@@ -7,11 +7,12 @@ Written by jackylam5 and maware
 '''
 
 import discord
+from discord.ext import commands
 import json
 # Import Flandre Errors
 from .errors import MissingConfigFile
 
-class Bot(discord.ext.commands.Bot):
+class Bot(commands.Bot):
 
     def __init__(self):
         ''' Set up config and logging. Then set up the built-in discord bot '''
@@ -35,8 +36,8 @@ class Bot(discord.ext.commands.Bot):
             print("[!] Config File (Flandre/config.json) Missing")
             print("\tReason: {0}".format(e))
             with open('Flandre/config.json', 'w') as config:
-                json.dump({'token': '', 'prefix': '!', 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, 'dev_mode': False})
+                json.dump({'token': '', 'prefix': '!', 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, 'dev_mode': False}, config)
             print("A config file has been made for you (Flandre/config.json). Please fill it out and restart the bot")
             # Raise MissingConfigFile to end the bot script
-            raise MissingConfigFile
+            raise MissingConfigFile(e)
 
