@@ -8,13 +8,14 @@ Or try to restart the bot after 20 seconds
 import Flandre
 import asyncio
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from discord import LoginFailure, ClientException, DiscordException
 from time import sleep
 
 # Set up a log for when the bot restarts incase user is away and the bot completely dies
 logger = logging.getLogger('Flandre-start.py')
 logger.setLevel(logging.DEBUG)
-fh = logging.FileHandler(filename='Flandre-StartErrors.log', encoding='utf-8', mode='w')
+fh = TimedRotatingFileHandler(filename='Flandre-StartErrors.log', when='W0', interval=1, backupCount=5, encoding='utf-8',)
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s > %(message)s')
 fh.setFormatter(formatter)

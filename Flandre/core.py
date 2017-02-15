@@ -9,6 +9,8 @@ Written by Scrubs (jackylam5 & maware)
 import discord
 from discord.ext import commands
 import json
+import logging
+from logging.handlers import TimedRotatingFileHandler
 # Import Flandre Errors
 from .errors import MissingConfigFile
 
@@ -21,6 +23,14 @@ class Bot(commands.Bot):
         self.discordlogger = None
         self.loadConfig()
         self.makeLoggers()
+
+        # Check if config has a prefix
+        if self.config['prefix'] == '':
+            self.config['prefix'] = '!'
+            self.logger.warning("Prefix in config was empty. Using '!' as the prefix")
+
+        # Load the __init__ for commands.Bot with values in config 
+        super().__init__(command_prefix = self.config['prefix'], description = self.config['description'], pm_help = self.config['pm_help'])
 
     def loadConfig(self):
         ''' Load the config file
@@ -41,3 +51,31 @@ class Bot(commands.Bot):
             # Raise MissingConfigFile to end the bot script
             raise MissingConfigFile(e)
 
+
+    def makeLoggers(self):
+        ''' Makes the logger and log file 
+        This makes a log file that holds all Flandre and discord.py errors
+        It will be remade every monday
+        '''
+        
+        # Make Flandre's logger
+        self.logger = logging.getLogger('Flandre')
+        self.logger.setLevel(logging.DEBUG)
+
+        # Make discord.py's logger
+        self.discordlogger = logging.getLogger('discord')
+        # If dev mode is enabled make the discord logging display everything
+        if self.config['dev_mode']:
+            self.discordlogger.setLevel(logging.DEBUG)
+        else:
+            self.discordlogger.setLevel(logging.ERROR)
+        
+        # Make file handler for log file
+        fh = TimedRotatingFileHandler(filename='Flandre.log', when='W0', interval=1, backupCount=5, encoding='utf-8')
+        fh.setLevel(logging.DEBUG)
+        
+        # Make the format for log file
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s > %(message)s')
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh)
+        self.discordlogger.addHandler(fh)
