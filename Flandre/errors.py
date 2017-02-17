@@ -5,3 +5,6 @@ Holds all the custom errors Flandre can raise
 
 class MissingConfigFile(Exception):
     pass
+
+class LoginError(Exception):
+    pass

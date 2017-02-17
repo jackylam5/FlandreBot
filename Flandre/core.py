@@ -11,8 +11,11 @@ from discord.ext import commands
 import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from os import listdir, mkdir
+from os.path import isdir
+from sys import exit
 # Import Flandre Errors
-from .errors import MissingConfigFile
+from .errors import *
 
 class Bot(commands.Bot):
 
@@ -46,7 +49,7 @@ class Bot(commands.Bot):
             print("[!] Config File (Flandre/config.json) Missing")
             print("\tReason: {0}".format(e))
             with open('Flandre/config.json', 'w') as config:
-                json.dump({'token': '', 'prefix': '!', 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, 'dev_mode': False}, config)
+                json.dump({'token': '', 'prefix': '!', "ownerid": [], 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, "game": "Help = !help", 'dev_mode': False}, config)
             print("A config file has been made for you (Flandre/config.json). Please fill it out and restart the bot")
             # Raise MissingConfigFile to end the bot script
             raise MissingConfigFile(e)
@@ -71,7 +74,7 @@ class Bot(commands.Bot):
             self.discordlogger.setLevel(logging.ERROR)
         
         # Make file handler for log file
-        fh = TimedRotatingFileHandler(filename='Flandre.log', when='W0', interval=1, backupCount=5, encoding='utf-8')
+        fh = TimedRotatingFileHandler(filename='Flandre.log', when='d', interval=1, backupCount=5, encoding='utf-8')
         fh.setLevel(logging.DEBUG)
         
         # Make the format for log file
@@ -79,3 +82,43 @@ class Bot(commands.Bot):
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
         self.discordlogger.addHandler(fh)
+
+    def start(self):
+        '''Replace discord clients start command to inculde bot token from config
+        If the token is empty or incorrect raises Flandre.LoginError
+        '''
+
+        if self.config['token'] == '':
+            print("Token is empty please open the config file and add your Bots token")
+            self.logger.critical("Token is empty please open the config file and add your Bots token")
+            raise LoginError("Token is empty please open the config file and add your Bots token")
+        else:
+            return super().start(self.config['token'])
+
+    async def on_ready(self):
+        ''' When bot has fully logged on 
+        Log bots username and ID
+        Then load cogs
+        '''
+        self.logger.info('Logged in as: {0.user.name} ({0.user.id})'.format(self))
+
+        # Load cogs
+        if isdir('Flandre/cogs'):
+            files = [file for file in listdir('Flandre/cogs') if ".py" in file]
+            if len(files) == 0:
+                print("No python files found. Which means no commands found. Bot logged off")
+                self.logger.critical("No python files found. Which means no commands found. Bot logged off")
+                await self.logout()
+                exit("No python files found. Which means no commands found. Bot logged off")
+            else:
+                for file in files:
+                    self.logger.info("Loaded Cog: {}".format(file[:-3]))
+                    self.load_extension('Flandre.cogs.' + file[:-3])
+        else:
+            mkdir('Flandre/cogs')
+            print("No cog folder found. Which means no commands found. Bot logged off")
+            self.logger.critical("No cog folder found. Which means no commands found. Bot logged off")
+            self.logger.info("Flandre/cogs has been made for you")
+            print("Flandre/cogs has been made for you")
+            await self.logout()
+            exit("No cog folder found. Which means no commands found. Bot logged off")

@@ -15,7 +15,7 @@ from time import sleep
 # Set up a log for when the bot restarts incase user is away and the bot completely dies
 logger = logging.getLogger('Flandre-start.py')
 logger.setLevel(logging.DEBUG)
-fh = TimedRotatingFileHandler(filename='Flandre-StartErrors.log', when='W0', interval=1, backupCount=5, encoding='utf-8',)
+fh = TimedRotatingFileHandler(filename='Flandre-StartErrors.log', when='d', interval=1, backupCount=5, encoding='utf-8',)
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s > %(message)s')
 fh.setFormatter(formatter)
@@ -34,7 +34,7 @@ while run:
         logger.critical("Config File Missing: {}".format(e))
         logger.info("A config file has been made for you (Flandre/config.json). Please fill it out and restart the bot")
         run = False
-    except LoginFailure as e:
+    except (LoginFailure, Flandre.LoginError) as e:
         # LogIn Fails
         loop.run_until_complete(bot.logout())
         logger.critical("Login Failed: {}".format(e))
@@ -45,6 +45,11 @@ while run:
         logger.error("Disconnected will try to reconnect: {}".format(e))
         run = True
         sleep(20)
+    except SystemExit as e:
+        # System Exit
+        loop.close()
+        logger.critical("System Exit: {}".format(e))
+        run = False
     except Exception as e:
         # Any Unknown Exception
         logger.critical("Unknown Exception: {}".format(e))

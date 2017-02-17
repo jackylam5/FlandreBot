@@ -1,2 +1,3 @@
 from .core import Bot
-from .errors import MissingConfigFile
+from .errors import *
+from . import permissions
