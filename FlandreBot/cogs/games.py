@@ -45,6 +45,9 @@ class games:
         author = ctx.message.author
         server = ctx.message.server
         channel = ctx.message.channel
+        channelname = channel.name.lower()
+        if 'bot' not in channelname:
+            return
         if user != None:
             if user == author:
                 await self.bot.say("{} you cant play against yourself".format(author.mention))
@@ -66,9 +69,8 @@ class games:
                     self.battleship[author.id]['server'][server.id] = {'against' : user.id, 'turn' : 0, 'inv' : 'waiting', 'game' : 'battleship'}
                     self.battleship[user.id]['server'][server.id] = {'against' : author.id, 'turn' : 0, 'inv' : 'invited', 'game' : 'battleship'}
                     files("FlandreBot/data/games/battleship.json", "save", self.battleship)
-                    await self.accept_game(ctx, author, server, channel, "FlandreBot/data/games/battleship.json", True, False)
+                    await self.accept_game(ctx, user, server, channel, "FlandreBot/data/games/battleship.json", True, False)
                     await self.place_game(ctx, user, server, channel, "FlandreBot/data/games/battleship.json", True, None, False)
-                    await self.bot.say("IT WORKS")
                 else:
                     await self.bot.send_message(channel, "{} you're already in a game".format(author.mention))
                 return
@@ -102,6 +104,9 @@ class games:
         author = ctx.message.author
         server = ctx.message.server
         channel = ctx.message.channel
+        channelname = channel.name.lower()
+        if 'bot' not in channelname:
+            return
         if author.id in self.battleship:
             if server.id in self.battleship[author.id]['server']:
                 if self.battleship[author.id]['server'][server.id]['inv'] == 'invited':
@@ -119,6 +124,9 @@ class games:
         author = ctx.message.author
         server = ctx.message.server
         channel = ctx.message.channel
+        channelname = channel.name.lower()
+        if 'bot' not in channelname:
+            return
         if author.id in self.battleship:
             if server.id in self.battleship[author.id]['server']:
                 if self.battleship[author.id]['server'][server.id]['inv'] == 'invited':
@@ -141,6 +149,9 @@ class games:
         author = ctx.message.author
         server = ctx.message.server
         channel = ctx.message.channel
+        channelname = channel.name.lower()
+        if 'bot' not in channelname:
+            return
         if author.id in self.battleship:
             if server.id in self.battleship[author.id]['server']:
                 if self.battleship[author.id]['server'][server.id]['inv'] == 'waiting':
@@ -163,6 +174,9 @@ class games:
         author = ctx.message.author
         server = ctx.message.server
         channel = ctx.message.channel
+        channelname = channel.name.lower()
+        if 'bot' not in channelname:
+            return
         if author.id in self.battleship:
             if server.id in self.battleship[author.id]['server']:
                 if self.battleship[author.id]['server'][server.id]['inv'] == 'accepted':
