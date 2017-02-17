@@ -45,6 +45,28 @@ class info:
 
     @commands.command(pass_context=True)
     @permissions.checkOwner()
+    async def notify(self, ctx, *text):  
+        """noitify something in all servers"""
+        
+        for server in self.bot.servers:
+            if text != None:
+                channel = server.default_channel
+                message = ''
+                for t in text:
+                    message = message + " " + t
+                message = message[1:]
+
+                if 'MENTION' in message and self.currentuser != '':
+                    server = self.bot.get_server(self.currentserver)
+                    user = discord.utils.get(server.members, id=self.currentuser)
+                    message = message.replace("MENTION", user.mention)
+                
+                await self.bot.send_message(channel, message)
+            else:
+                await self.bot.say("Please enter a message")
+        
+    @commands.command(pass_context=True)
+    @permissions.checkOwner()
     async def servers(self, ctx):  
         """Get list of servers the bot is in"""
         

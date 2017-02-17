@@ -5,6 +5,8 @@ from discord import Embed, Colour
 import re
 import math
 
+channelnames = ['bot', 'osu', 'taiko', 'mania', 'ctb']
+
 class osu():
     ''' osu! commands 
     If beatmap link is posted bot will send info on that map
@@ -21,7 +23,14 @@ class osu():
 
     async def getBeatmap(self, message):
         ''' Get Beatmap Info '''
-        if 'osu' not in message.channel.name.lower():
+        
+        rightchannel = False
+        channelname = message.channel.name.lower()
+        for channame in channelnames:
+            if channame in channelname:
+                rightchannel = True
+            
+        if not rightchannel:
             return
 
         words = message.content.split(' ')

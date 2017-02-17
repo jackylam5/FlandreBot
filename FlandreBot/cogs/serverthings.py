@@ -219,13 +219,14 @@ class serverthings:
                     await self.bot.send_message(channel, message)
                     
     async def on_mention_message(self, message):
-        if message.server.id in self.clever:
-            if message.channel.id in self.clever[message.server.id]:
-                if self.bot.user.mentioned_in(message):
-                    mess = message.content.split(' ', 1)[1]
-                    cleverbot = Cleverbot('FlandreBot')
-                    answer = cleverbot.ask(mess)
-                    await self.bot.send_message(message.channel, answer)
+        if not message.channel.is_private:
+            if message.server.id in self.clever:
+                if message.channel.id in self.clever[message.server.id]:
+                    if self.bot.user.mentioned_in(message):
+                        mess = message.content.split(' ', 1)[1]
+                        cleverbot = Cleverbot('FlandreBot')
+                        answer = cleverbot.ask(mess)
+                        await self.bot.send_message(message.channel, answer)
     
 def check_folders():
     if not os.path.exists("FlandreBot/data/serverthings"):
