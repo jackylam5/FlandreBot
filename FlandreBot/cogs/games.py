@@ -365,7 +365,7 @@ class games:
                                 if not user.bot:
                                     await self.bot.send_message(user, 'Both players are done! You start first!\nUse "{}bs target coords" to shoot'.format(self.bot.command_prefix))
                                 else:
-                                    await self.target_game(ctx, user, server, channel, "FlandreBot/data/games/battleship.json", True, None, currentserver)
+                                    await self.target_game(ctx, user, server, channel, "FlandreBot/data/games/battleship.json", True, None, currentserver, False)
                     else:
                         await self.bot.send_message(author, 'You are not done yet or already playing!')
                 else:
