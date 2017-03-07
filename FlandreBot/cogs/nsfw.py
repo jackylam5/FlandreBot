@@ -268,7 +268,7 @@ class nsfw:
 
         # Get webpage to pick image
         with aiohttp.ClientSession() as aioclient:
-            async with aioclient.get(base_url.format(linktags), headers={'User-Agent': 'Googlebot-Image/1.0'}) as resp:
+            async with aioclient.get(base_url.format(linktags), headers={'User-Agent': 'Mozilla/5.0'}) as resp:
                 data = await resp.text()
 
         # Open webpage with bs4
@@ -279,7 +279,7 @@ class nsfw:
             post_url = 'https://chan.sankakucomplex.com' + image.parent['href']        
              # Get image
             with aiohttp.ClientSession() as aioclient:
-                async with aioclient.get(post_url, headers={'User-Agent': 'Googlebot-Image/1.0'}) as resp:
+                async with aioclient.get(post_url, headers={'User-Agent': 'Mozilla/5.0'}) as resp:
                     data = await resp.text()
 
             soup = BeautifulSoup(data, 'html.parser')
@@ -289,7 +289,7 @@ class nsfw:
             try:
                 # Get webpage to pick image
                 with aiohttp.ClientSession() as aioclient:
-                    async with aioclient.get(image_url, headers={'User-Agent': 'Googlebot-Image/1.0'}) as resp:
+                    async with aioclient.get(image_url, headers={'User-Agent': 'Mozilla/5.0'}) as resp:
                         data = await resp.read()
 
                 image_io = io.BytesIO(data)
