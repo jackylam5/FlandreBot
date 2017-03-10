@@ -10,6 +10,7 @@ import json
 import re
 import asyncio
 import chess
+from PIL import Image
 
 bsBoard = """
 ```
@@ -23,38 +24,6 @@ bsBoard = """
 7| | | | | | | | | | 
 8| | | | | | | | | | 
 9| | | | | | | | | | 
-```
-"""
-
-chessBoard = """
-```
-　　   　　black       
-8|♜|♞|♝|♛|♚|♝|♞|♜| 
-7|♟|♟|♟|♟|♟|♟|♟|♟| 
-6|　|　|　|　|　|　|　|　| 
-5|　|　|　|　|　|　|　|　| 
-4|　|　|　|　|　|　|　|　| 
-3|　|　|　|　|　|　|　|　| 
-2|♙|♙|♙|♙|♙|♙|♙|♙| 
-1|♖|♘|♗|♕|♔|♗|♘|♖| 
-  A　B　C　D　E　F　G　H
-　　   　　white       
-```
-"""
-
-emptyChessBoard = """
-```
-　　   　　black        
-8|　|　|　|　|　|　|　|　| 
-7|　|　|　|　|　|　|　|　| 
-6|　|　|　|　|　|　|　|　| 
-5|　|　|　|　|　|　|　|　| 
-4|　|　|　|　|　|　|　|　| 
-3|　|　|　|　|　|　|　|　| 
-2|　|　|　|　|　|　|　|　| 
-1|　|　|　|　|　|　|　|　| 
-  A　B　C　D　E　F　G　H
-　　   　　white       
 ```
 """
 
@@ -369,14 +338,17 @@ class games:
                                 movepiece = chess.Move.from_uci(cord)
                                 board.push(movepiece)
                                 newboard = board.fen()
-                                message = self.getboard(newboard)
+                                boardimg = self.getboard(newboard, author.id)
                                 self.chess[author.id]['server'][currentserver]['board'] = newboard
                                 self.chess[user.id]['server'][currentserver]['board'] = newboard
                                 self.chess[author.id]['server'][currentserver]['turn'] = 0
                                 self.chess[user.id]['server'][currentserver]['turn'] = 1
                                 files("FlandreBot/data/games/chess.json", "save", self.chess)
-                                await self.bot.send_message(author, message + '\nPlease wait for the other player')
-                                await self.bot.send_message(user, message + '\nYour opponent moved from ' + str(coords[0]).upper() + ' to ' + str(coords[1]).upper() + ', it is your turn now!')
+                                await self.bot.send_file(author, boardimg)
+                                await self.bot.send_file(user, boardimg)
+                                os.remove(boardimg)
+                                await self.bot.send_message(author, '\nPlease wait for the other player')
+                                await self.bot.send_message(user, '\nYour opponent moved from ' + str(coords[0]).upper() + ' to ' + str(coords[1]).upper() + ', it is your turn now!')
                                 if board.is_stalemate() or board.is_insufficient_material() or board.is_game_over():
                                     await self.bot.send_message(author, 'you win!')
                                     await self.bot.send_message(user, 'you lost!')
@@ -403,8 +375,9 @@ class games:
                 if self.chess[author.id]['currentserver'] in self.chess[author.id]['server']:
                     currentserver = self.chess[author.id]['currentserver']
                     board = self.chess[author.id]['server'][currentserver]['board']
-                    message = self.getboard(board)
-                    await self.bot.send_message(author, message)
+                    boardimg = self.getboard(board, author.id)
+                    await self.bot.send_file(author, boardimg)
+                    os.remove(boardimg)
                 else:
                     await self.bot.send_message(author, 'You are not in a game!')
             else:
@@ -530,8 +503,8 @@ class games:
                     elif game == 'chess':
                         board = chess.Board()
                         boardtext = board.fen()
-                        chessBoard = self.getboard(boardtext)
-                        message = chessBoard + 'Use "{}chess move from to" to move a chess piece.\nFor example "{}chess move A2 A3"'.format(self.bot.command_prefix, self.bot.command_prefix)
+                        chessBoard = self.getboard(boardtext, author.id)
+                        message = 'Use "{}chess move from to" to move a chess piece.\nFor example "{}chess move A2 A3"'.format(self.bot.command_prefix, self.bot.command_prefix)
                         db[author.id]['server'][server.id]['board'] = boardtext
                         db[user.id]['server'][server.id]['board'] = boardtext
                         files(file, "save", db)
@@ -540,6 +513,9 @@ class games:
                             await self.bot.send_message(author, message)
                             await self.bot.send_message(user, message) 
                         elif game == 'chess':
+                            await self.bot.send_file(author, chessBoard)
+                            await self.bot.send_file(user, chessBoard)
+                            os.remove(boardimg)
                             rand = randint(1,100)
                             if rand < 51:
                                 db[author.id]['server'][server.id]['turn'] = 1
@@ -1017,9 +993,9 @@ class games:
     #Chess utility
 
     #show board text
-    def getboard(self, board):
-        chessBoard = emptyChessBoard
-        text = None
+    def getboard(self, board, name):
+        boardimg = Image.open("FlandreBot/images/board.png")
+        image = None
         index = 0
         counter = 0
         for i in range(0, 64):
@@ -1027,29 +1003,29 @@ class games:
                 index = index + 1
             if counter == 0:
                 if board[index] == 'r':
-                    text = '♜'
+                    image = Image.open("FlandreBot/images/RB.png")
                 elif board[index] == 'n':
-                    text = '♞'
+                    image = Image.open("FlandreBot/images/KB.png")
                 elif board[index] == 'b':
-                    text = '♝'
+                    image = Image.open("FlandreBot/images/BB.png")
                 elif board[index] == 'q':
-                    text = '♛'
+                    image = Image.open("FlandreBot/images/QB.png")
                 elif board[index] == 'k':
-                    text = '♚'
+                    image = Image.open("FlandreBot/images/KiB.png")
                 elif board[index] == 'p':
-                    text = '♟'
+                    image = Image.open("FlandreBot/images/PB.png")
                 elif board[index] == 'P':
-                    text = '♙' 
+                    image = Image.open("FlandreBot/images/PW.png")
                 elif board[index] == 'R':
-                    text = '♖'
+                    image = Image.open("FlandreBot/images/RW.png")
                 elif board[index] == 'N':
-                    text = '♘'
+                    image = Image.open("FlandreBot/images/KW.png")
                 elif board[index] == 'B':
-                    text = '♗'
+                    image = Image.open("FlandreBot/images/BW.png")
                 elif board[index] == 'Q':
-                    text = '♕'
+                    image = Image.open("FlandreBot/images/QW.png")
                 elif board[index] == 'K':
-                    text = '♔'
+                    image = Image.open("FlandreBot/images/KiW.png")
 
             try:
                 if counter == 0:
@@ -1062,14 +1038,14 @@ class games:
             except:
                 pass
             
-            if text is not None:
+            if image is not None:
                 index = index + 1
                 row = floor(i / 8)
-                column = (i % 8) * 2
-                insertplace = 28 + (20 * row) + column
-                chessBoard = chessBoard[:insertplace] + text + chessBoard[(insertplace+1):]
-                text = None
-        return chessBoard
+                column = (i % 8)
+                boardimg.paste(image, (20 + column*50, 20 + row*50), image)
+                image = None
+        boardimg.save('FlandreBot/images/board' + name + '.png')
+        return 'FlandreBot/images/board' + name + '.png'
             
     
 def check_folders():
