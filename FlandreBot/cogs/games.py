@@ -352,6 +352,12 @@ class games:
                                 if board.is_stalemate() or board.is_insufficient_material() or board.is_game_over():
                                     await self.bot.send_message(author, 'you win!')
                                     await self.bot.send_message(user, 'you lost!')
+                                    currentchannel = self.chess[author.id]['currentchannel']
+                                    getchannel = self.bot.get_channel(currentchannel)
+                                    await self.bot.send_message(getchannel, '{} Won against {} in chess!'.format(author.mention, user.mention))
+                                    self.chess[author.id]['server'].pop(currentserver)
+                                    self.chess[userid]['server'].pop(currentserver)
+                                    files("FlandreBot/data/games/chess.json", "save", self.chess)
                             else:
                                 await self.bot.send_message(author, 'That is not a valid move!')
                         else:
@@ -515,7 +521,8 @@ class games:
                         elif game == 'chess':
                             await self.bot.send_file(author, chessBoard)
                             await self.bot.send_file(user, chessBoard)
-                            os.remove(boardimg)
+                            os.remove(chessBoard)
+                            await asyncio.sleep(0.5)
                             rand = randint(1,100)
                             if rand < 51:
                                 db[author.id]['server'][server.id]['turn'] = 1
