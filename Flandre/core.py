@@ -46,15 +46,15 @@ class Bot(commands.Bot):
             - critical
         '''
         if logtype.lower() == 'info':
-            self.logger.info("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+            self.logger.info("[{0.f_locals[self].__class__.__name__}.{0.f_code.co_name}] {1}".format(sys._getframe(1), message))
         elif logtype.lower() == 'warn':
-            self.logger.warning("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+            self.logger.warning("[{0.f_locals[self].__class__.__name__}.{0.f_code.co_name}] {1}".format(sys._getframe(1), message))
         elif logtype.lower() == 'error':
-            self.logger.error("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+            self.logger.error("[{0.f_locals[self].__class__.__name__}.{0.f_code.co_name}] {1}".format(sys._getframe(1), message))
         elif logtype.lower() == 'critical':
-            self.logger.critical("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+            self.logger.critical("[{0.f_locals[self].__class__.__name__}.{0.f_code.co_name}] {1}".format(sys._getframe(1), message))
         else:
-            self.logger.critical("Invalid log type suppiled > [{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+            self.logger.critical("Invalid log type suppiled > [{0.f_locals[self].__class__.__name__}.{0.f_code.co_name}] {1}".format(sys._getframe(1), message))
 
     def loadConfig(self):
         ''' Load the config file
@@ -69,8 +69,9 @@ class Bot(commands.Bot):
             # If config file is missing tell user and create one for them to fill out
             print("[!] Config File (Flandre/config.json) Missing")
             print("\tReason: {0}".format(e))
+            tempconfig = {'token': '', 'prefix': '!', "ownerid": [], 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, "game": "Help = !help", 'dev_mode': False}
             with open('Flandre/config.json', 'w') as config:
-                json.dump({'token': '', 'prefix': '!', "ownerid": [], 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, "game": "Help = !help", 'dev_mode': False}, config)
+                json.dump(tempconfig, config, indent=4, sort_keys=True)
             print("A config file has been made for you (Flandre/config.json). Please fill it out and restart the bot")
             # Raise MissingConfigFile to end the bot script
             raise MissingConfigFile(e)
@@ -122,6 +123,7 @@ class Bot(commands.Bot):
         Then load cogs
         '''
         self.log('info', 'Logged in as: {0.user.name} ({0.user.id})'.format(self))
+        await self.change_presence(game=discord.Game(name=self.config['game']))
 
         # Load cogs
         if isdir('Flandre/cogs'):
