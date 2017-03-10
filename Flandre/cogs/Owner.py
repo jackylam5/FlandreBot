@@ -20,21 +20,21 @@ class Owner:
         message = ctx.message
 
         # Log that the cog is being reloaded and by who
-        self.bot.logger.info("Reload module: {0}. Requested by {1.name}#{1.discriminator}".format(module, message.author))
+        self.bot.log('info', "Reload module: {0}. Requested by {1.name}#{1.discriminator}".format(module, message.author))
         
         try:
             # Get the module's cog and check it has a _unload function in it (Must be an async function)
             cog = self.bot.get_cog(module)
             unload_function = getattr(cog, "_unload", None)
             if unload_function is not None:
-                self.bot.logger.info("Cog has a _unload function. Running it")
+                self.bot.log('info', "Cog has a _unload function. Running it")
                 await unload_function()
 
             self.reloadcog(module)
-            self.bot.logger.info("Reloaded: {}".format(module))
+            self.bot.log('info', "Reloaded: {}".format(module))
             await self.bot.say("Done reloading: {}".format(module))
         except Exception as e:
-            self.bot.logger.critical("Reload failed. Reason: {}".format(e))
+            self.bot.log('critical', "Reload failed. Reason: {}".format(e))
             await self.bot.say("Something went wrong. Check log to see what it was")
 
             
@@ -47,15 +47,15 @@ class Owner:
         message = ctx.message
 
         # Log that the cog is being loaded and by who
-        self.bot.logger.info("Load module: {0}. Requested by {1.name}#{1.discriminator}".format(module, message.author))
+        self.bot.log('info', "Load module: {0}. Requested by {1.name}#{1.discriminator}".format(module, message.author))
         
         try:
             self.loadcog(module)
-            self.bot.logger.info("Loaded: {}".format(module))
+            self.bot.log('info', "Loaded: {}".format(module))
             await self.bot.say("Done loading: {}".format(module))
 
         except Exception as e:
-            self.bot.logger.critical("Load failed. Reason: {}".format(e))
+            self.bot.log('critical', "Load failed. Reason: {}".format(e))
             await self.bot.say("Something went wrong. Check log to see what it was")
     
     @commands.command(pass_context=True)    
@@ -67,22 +67,22 @@ class Owner:
         message = ctx.message
 
         # Log that the cog is being unloaded and by who
-        self.bot.logger.info("Unload module: {0}. Requested by {1.name}#{1.discriminator}".format(module, message.author))
+        self.bot.log('info', "Unload module: {0}. Requested by {1.name}#{1.discriminator}".format(module, message.author))
 
         try:
             # Get the module's cog and check it has a _unload function in it (Must be an async function)
             cog = self.bot.get_cog(module)
             unload_function = getattr(cog, "_unload", None)
             if unload_function is not None:
-                self.bot.logger.info("Cog has a _unload function. Running it")
+                self.bot.log('info', "Cog has a _unload function. Running it")
                 await unload_function()
 
             self.unloadcog(module)
-            self.bot.logger.info("Unloaded: {}".format(module))
+            self.bot.log('info', "Unloaded: {}".format(module))
             await self.bot.say("Done unloading: {}".format(module))
 
         except Exception as e:
-            self.bot.logger.critical("Unload failed. Reason: {}".format(e))
+            self.bot.log('critical', "Unload failed. Reason: {}".format(e))
             await self.bot.say("Something went wrong. Check log to see what it was")
     
     #reload function

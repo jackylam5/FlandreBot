@@ -175,7 +175,7 @@ class general:
                 p = Poll(message, self)
                 if p.valid:
                     self.polls[message.channel.id] = p
-                    self.bot.logger.info("New Poll made in channel: {0}".format(message.channel.id))
+                    self.bot.log('info', "New Poll made in channel: {0}".format(message.channel.id))
                     await p.start()
                 else:
                     await self.bot.say("poll question;option1;option2 (...)")
@@ -233,7 +233,7 @@ class Poll():
             msg += "*{}* - {} votes\n".format(data["ANSWER"], str(data["VOTES"]))
         await self.cog.bot.send_message(self.channel, msg)
         self.cog.remove_poll(self.channel.id)
-        self.cog.bot.logger.info("Poll deleted for channel: {0}".format(self.channel.id))
+        self.cog.bot.log('info', "Poll deleted for channel: {0}".format(self.channel.id))
 
     def checkAnswer(self, message):
         try:

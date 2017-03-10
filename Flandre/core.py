@@ -14,6 +14,7 @@ from logging.handlers import TimedRotatingFileHandler
 from os import listdir, mkdir
 from os.path import isdir
 from sys import exit
+import sys
 # Import Flandre Errors
 from .errors import *
 
@@ -34,6 +35,26 @@ class Bot(commands.Bot):
 
         # Load the __init__ for commands.Bot with values in config 
         super().__init__(command_prefix = self.config['prefix'], description = self.config['description'], pm_help = self.config['pm_help'])
+
+    def log(self, logtype, message):
+        ''' Log the info supplied by the user
+        Requires the object that called it e.g the cog, the error type and the message to log
+        The types of errors are:
+            - info
+            - warn
+            - error
+            - critical
+        '''
+        if logtype.lower() == 'info':
+            self.logger.info("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+        elif logtype.lower() == 'warn':
+            self.logger.warning("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+        elif logtype.lower() == 'error':
+            self.logger.error("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+        elif logtype.lower() == 'critical':
+            self.logger.critical("[{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
+        else:
+            self.logger.critical("Invalid log type suppiled > [{0}] {1}".format(sys._getframe(1).f_code.co_name, message))
 
     def loadConfig(self):
         ''' Load the config file
@@ -90,7 +111,7 @@ class Bot(commands.Bot):
 
         if self.config['token'] == '':
             print("Token is empty please open the config file and add your Bots token")
-            self.logger.critical("Token is empty please open the config file and add your Bots token")
+            self.log("critical", "Token is empty please open the config file and add your Bots token")
             raise LoginError("Token is empty please open the config file and add your Bots token")
         else:
             return super().start(self.config['token'])
@@ -100,25 +121,30 @@ class Bot(commands.Bot):
         Log bots username and ID
         Then load cogs
         '''
-        self.logger.info('Logged in as: {0.user.name} ({0.user.id})'.format(self))
+        self.log('info', 'Logged in as: {0.user.name} ({0.user.id})'.format(self))
 
         # Load cogs
         if isdir('Flandre/cogs'):
             files = [file for file in listdir('Flandre/cogs') if ".py" in file]
             if len(files) == 0:
                 print("No python files found. Which means no commands found. Bot logged off")
-                self.logger.critical("No python files found. Which means no commands found. Bot logged off")
+                self.log('critical', "No python files found. Which means no commands found. Bot logged off")
                 await self.logout()
                 exit("No python files found. Which means no commands found. Bot logged off")
             else:
                 for file in files:
-                    self.logger.info("Loaded Cog: {}".format(file[:-3]))
+                    self.log('info', "Loaded Cog: {}".format(file[:-3]))
                     self.load_extension('Flandre.cogs.' + file[:-3])
         else:
             mkdir('Flandre/cogs')
             print("No cog folder found. Which means no commands found. Bot logged off")
-            self.logger.critical("No cog folder found. Which means no commands found. Bot logged off")
-            self.logger.info("Flandre/cogs has been made for you")
+            self.log('critical', "No cog folder found. Which means no commands found. Bot logged off")
+            self.log('info', "Flandre/cogs has been made for you")
             print("Flandre/cogs has been made for you")
             await self.logout()
             exit("No cog folder found. Which means no commands found. Bot logged off")
+
+        # Check for data folder 
+        if not isdir('Flandre/data'):
+            self.log('warn', "No Data folder found. It has been made for you at 'Flandre/data'")
+            mkdir('Flandre/data')
