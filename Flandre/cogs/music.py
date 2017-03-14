@@ -39,6 +39,47 @@ class MusicPlayer():
         
         return (user.id == self.bot.config['ownerid'])   
     
+    async def crash(self):
+        ''' Reconnects the bot but keeps the queue so songs do not need to be rentered. While skipping the song that broke it 
+        '''
+        # Copy queue and remove the song that is currently playing
+        tempqueue = self.queue
+        tempqueue.pop(0)
+        # Get current voice channel
+        channel = self.voice.channel
+
+        ### Disconnect
+        self.queue = []
+        self.repeat = False
+
+        # Stop current song
+        if self.player != None:
+            self.player.stop()
+        self.skips_needed = 0
+        self.votes = []
+
+        # Disconnect voice
+        if self.client.is_voice_connected(self.server):
+            await self.voice.disconnect()
+
+        await asyncio.sleep(2)
+        # Clear voice client and player
+        self.voice = None
+        self.player = None
+        ### End of disconnect
+
+        # Reconnect to voice
+        self.voice = await self.client.join_voice_channel(channel)
+
+        # Put queue back in
+        self.queue = tempqueue
+
+        await self.client.send_message(self.text_channel, "Reconnected. Will start playing the next song")
+
+        # Start playing again
+        if self.player is None and len(self.queue) > 0:
+            await self.audioPlayer()
+
     async def connect(self, message):
         ''' Connect the bot to the voice channel '''
         
@@ -655,6 +696,20 @@ class music():
         # Check if there is a music player
         if message.server.id in self.musicplayers:
             await self.musicplayers[message.server.id].resumeMusic(message)
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @commands.command(no_pm=True, pass_context=True)
+    async def crash(self, ctx):
+        ''' Resume Command '''
+
+        message = ctx.message
+        if not 'music' in message.channel.name.lower():
+            await self.bot.send_message(message.channel, 'Music text channel command only')
+            return
+        # Check if there is a music player
+        if message.server.id in self.musicplayers:
+            await self.musicplayers[message.server.id].crash()
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
