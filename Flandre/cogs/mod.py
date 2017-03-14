@@ -195,9 +195,9 @@ class mod:
         except dscord.errors.HTTPException:
             await self.bot.say("Something went wrong. Please try again")
 
-    @commands.group(pass_context=True, no_pm=True)
-    @permissions.checkMod()
-    async def cleanup(self, ctx):
+    #@commands.group(pass_context=True, no_pm=True)
+    #@permissions.checkMod()
+    #async def cleanup(self, ctx):
         ''' Deletes messages
 
             cleanup messages [number] - removes number amount of messages
@@ -205,20 +205,20 @@ class mod:
             cleanup text "Text" [number] - removes number amount of messages with text in it
         '''
 
-        if ctx.invoked_subcommand is None:
-            pages = self.send_cmd_help(ctx)
-            for page in pages:
-                await self.send_message(ctx.message.channel, page)
+     #   if ctx.invoked_subcommand is None:
+      #      pages = self.send_cmd_help(ctx)
+       #     for page in pages:
+        #        await self.send_message(ctx.message.channel, page)
 
-    @cleanup.command(no_pm=True, pass_context=True)
-    async def text(self, ctx, text : str, number : int):
+    #@cleanup.command(no_pm=True, pass_context=True)
+    #async def text(self, ctx, text : str, number : int):
         ''' Deletes the last X messages containing the text specified
             Double quotes are needed for the text string
 
             Example: cleanup text "Test" 5
         '''
 
-        while deleted != number:
+     #   while deleted != number:
 
 
 
