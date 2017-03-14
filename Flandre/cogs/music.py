@@ -28,9 +28,6 @@ class MusicPlayer():
         # Skip (if active/current voters that have voted to skip)
         self.skips_needed = 0
         self.votes = []
-        # Config files
-        self.config = {}
-        self.loadConfig()
 
     def checkAdmin(self, user):
         ''' Check if the user is an admin (Has manage server permission) on the server '''
@@ -40,16 +37,7 @@ class MusicPlayer():
     def checkApproved(self, user):
         ''' Check is the user is in the list of approved users '''
         
-        return (user.id == self.config['ownerid'])
-        
-        
-    def loadConfig(self):
-        ''' Load the config from the config.json file '''
-        try:
-            with open('FlandreBot/config.json', 'r') as config:
-                self.config = json.load(config)
-        except json.decoder.JSONDecodeError:
-            pass    
+        return (user.id == self.bot.config['ownerid'])   
     
     async def connect(self, message):
         ''' Connect the bot to the voice channel '''
@@ -506,8 +494,7 @@ class music():
     '''
     def __init__(self, bot):
         self.bot = bot
-        self.musicplayers = {}
-        
+        self.musicplayers = {}        
 
     # unload function for when it is unloaded
     async def _unload(self):
