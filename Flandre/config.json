@@ -1,1 +1,9 @@
-{"token": "", "prefix": "!", "description": "FlandreBot always a work in progress. Written by Jackylam5 and maware", "pm_help": true, "dev_mode": false}
+{
+    "description": "FlandreBot always a work in progress. Written by Jackylam5 and maware",
+    "dev_mode": false,
+    "game": "Help = !help",
+    "ownerid": [],
+    "pm_help": true,
+    "prefix": "!",
+    "token": ""
+}

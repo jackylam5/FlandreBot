@@ -125,6 +125,11 @@ class Bot(commands.Bot):
         self.log('info', 'Logged in as: {0.user.name} ({0.user.id})'.format(self))
         await self.change_presence(game=discord.Game(name=self.config['game']))
 
+        # Check for data folder
+        if not isdir('Flandre/data'):
+            self.log('warn', "No Data folder found. It has been made for you at 'Flandre/data'")
+            mkdir('Flandre/data')
+
         # Load cogs
         if isdir('Flandre/cogs'):
             files = [file for file in listdir('Flandre/cogs') if ".py" in file]
@@ -146,7 +151,3 @@ class Bot(commands.Bot):
             await self.logout()
             exit("No cog folder found. Which means no commands found. Bot logged off")
 
-        # Check for data folder 
-        if not isdir('Flandre/data'):
-            self.log('warn', "No Data folder found. It has been made for you at 'Flandre/data'")
-            mkdir('Flandre/data')
