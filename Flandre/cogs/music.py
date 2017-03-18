@@ -166,7 +166,7 @@ class MusicPlayer:
                 # Play the audio
 
                 try:
-                    kwargs = {'use_avconv': True}
+                    kwargs = {'use_avconv': False}
                     # Make youtube_dl download song
                     self.player = await self.voice.create_ytdl_player(self.queue[0]['url'], ytdl_options={'quiet': True},**kwargs)
                     # Set volume
@@ -779,7 +779,6 @@ class music:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
     @player.command(pass_context=True, no_pm=True)
-    @permissions.checkMod()
     async def queue(self, ctx):
         ''' Show next few songs in the queue
         '''
