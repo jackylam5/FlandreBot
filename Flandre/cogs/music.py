@@ -819,7 +819,7 @@ class music:
         ''' When voice channel update happens 
         '''
         server = after.server
-        if self.bot.is_voice_connected(server):
+        if self.bot.is_voice_connected(server) and after != self.bot.user:
             voice = self.bot.voice_client_in(server)
             channelmembers = voice.channel.voice_members
             # Do a check then wait 10 seconds if true
@@ -831,7 +831,8 @@ class music:
                     if server.id in self.musicplayers:
                         done = await self.musicplayers[server.id].disconnect(self.bot.user, force=True)
                         if done:
-                            del self.musicplayers[server.id]
+                            if server.id in self.musicplayers
+                                del self.musicplayers[server.id]
                             self.bot.log('info', 'Removed Music Player for {0.name} ({0.id})'.format(server))
 
 def setup(bot):
