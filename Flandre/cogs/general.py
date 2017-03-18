@@ -87,7 +87,7 @@ class general:
                 result = 'You Win!'
             elif userchoice == "scissor" and botchoice == "rock":
                 result = 'You Lose :frowning:'
-            elif oserchoice == botchoice:
+            elif userchoice == botchoice:
                 result = "It's a draw!"
                 
             await self.bot.say("You chose: {0} and the bot chose: {1}. {2}".format(userchoice, botchoice, result))
