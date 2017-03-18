@@ -152,66 +152,61 @@ class MusicPlayer:
         ''' Used to play the songs in the queue until queue is empty
         '''
 
-        try:
-            while True:
-                # Check if queue is empty
-                if len(self.queue) == 0:
-                    if self.player != None:
-                        self.player.stop()
-                    self.player = None
-                    break
+        while True:
+            # Check if queue is empty
+            if len(self.queue) == 0:
+                if self.player != None:
+                    self.player.stop()
+                self.player = None
+                break
+            else:
+                # Stop the last song played
+                if self.player is not None:
+                    self.player.stop()
+                # Play the audio
+                try:
+                    kwargs = {'use_avconv': True}
+                    # Make youtube_dl download song
+                    self.player = await self.voice.create_ytdl_player(self.queue[0]['url'], ytdl_options={'quiet': True},**kwargs)
+                    # Set volume
+                    self.player.volume = self.volume
+                except youtube_dl.utils.ExtractorError:
+                    # Display error message is blocked
+                    temp_msg = "Sorry {0} is blocked in my country"
+                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
+                except youtube_dl.utils.DownloadError:
+                    # Display error message is blocked
+                    temp_msg = "Sorry {0} is blocked in my country"
+                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
                 else:
-                    # Stop the last song played
-                    if self.player is not None:
-                        self.player.stop()
-                    # Play the audio
-                    try:
-                        kwargs = {'use_avconv': False}
-                        # Make youtube_dl download song
-                        self.player = await self.voice.create_ytdl_player(self.queue[0]['url'], ytdl_options={'quiet': True},**kwargs)
-                        # Set volume
-                        self.player.volume = self.volume
-                    except youtube_dl.utils.ExtractorError:
-                        # Display error message is blocked
-                        temp_msg = "Sorry {0} is blocked in my country"
-                        await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
-                    except youtube_dl.utils.DownloadError:
-                        # Display error message is blocked
-                        temp_msg = "Sorry {0} is blocked in my country"
-                        await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
-                    else:
-                        # Get hours, mins and seconds
-                        m, s = divmod(int(self.player.duration), 60)
-                        h, m = divmod(m, 60)
-                        # Create playing embed
-                        np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.queue[0]['title'], h, m, s))
-                        np.set_author(name='Now Playing:', url=self.queue[0]['url'])
-                        np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
-                        np.set_thumbnail(url=self.queue[0]['thumbnail'])
-                        # Send the now playing embed and start player
-                        await self.bot.send_message(self.text_channel, embed=np)
-                        await asyncio.sleep(1)
-                        self.player.start()
-                        self.time_song_ends = time.time() + self.player.duration
-                        # Sleep while music is playing and did not error
-                        while self.player.is_playing() and not self.player.is_done():
-                            if self.player.error is None:
-                                await asyncio.sleep(1)
-                            else:
-                                print(self.player.error)
-                                self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
-                                self.bot.log('error', 'Reason: {0}'.format(self.player.error))
-                                await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
-                                break
-                        # Clear the queue of that song and reset skip
-                        self.skips_needed = 0
-                        self.votes = []
-                        if self.queue:
-                            del self.queue[0]
-        except Exception as e:
-            self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
-            self.bot.log('error', 'Reason: {0}'.format(e))
-                                
+                    # Get hours, mins and seconds
+                    m, s = divmod(int(self.player.duration), 60)
+                    h, m = divmod(m, 60)
+                    # Create playing embed
+                    np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.queue[0]['title'], h, m, s))
+                    np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+                    np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
+                    np.set_thumbnail(url=self.queue[0]['thumbnail'])
+                    # Send the now playing embed and start player
+                    await self.bot.send_message(self.text_channel, embed=np)
+                    await asyncio.sleep(1)
+                    self.player.start()
+                    self.time_song_ends = time.time() + self.player.duration
+                    # Sleep while music is playing and did not error
+                    while self.player.is_playing() and not self.player.is_done() and self.player.error is None:
+                        if self.player.error is None:
+                            await asyncio.sleep(1)
+                        else:
+                            print(self.player.error)
+                            self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
+                            self.bot.log('error', 'Reason: {0}'.format(self.player.error))
+                            await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
+                            break
+                    # Clear the queue of that song and reset skip
+                    self.skips_needed = 0
+                    self.votes = []
+                    if self.queue:
+                        del self.queue[0]
 
     async def addQueue(self, message, link):
         ''' Adds link to the queue to be played
