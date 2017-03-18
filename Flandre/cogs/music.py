@@ -124,13 +124,16 @@ class MusicPlayer:
             await self.bot.send_message(self.text_channel, 'Sorry {0.mention}, You need to be a mod to disconnect me'.format(user))
             return False
 
-    async def crash(self):
+    async def crash(self, ws=False):
         ''' Reconnects the bot but keeps the queue so songs do not need to be added again. 
             While skipping the song that broke it
         '''
 
         # Make a copy of current queue minus current song
-        tempqueue = self.queue[1:]
+        if ws:
+            tempqueue = self.queue
+        else:
+            tempqueue = self.queue[1:]
         # Get the current voice channel
         channel = self.voice.channel
         # Log current song and server that people said crashed
@@ -193,7 +196,7 @@ class MusicPlayer:
                     self.player.start()
                     self.time_song_ends = time.time() + self.player.duration
                     # Sleep while music is playing and did not error
-                    while self.player.is_playing() and not self.player.is_done() and self.player.error is None:
+                    while self.player.is_playing() and not self.player.is_done() and self.player.error is None and self.voice.main_ws is not None:
                         if self.player.error is None:
                             await asyncio.sleep(1)
                         else:
@@ -202,6 +205,8 @@ class MusicPlayer:
                             self.bot.log('error', 'Reason: {0}'.format(self.player.error))
                             await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
                             break
+                    if self.voice.main_ws is None:
+                        await self.crash(ws=True)
                     # Clear the queue of that song and reset skip
                     self.skips_needed = 0
                     self.votes = []
