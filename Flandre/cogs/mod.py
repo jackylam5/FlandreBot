@@ -4,6 +4,7 @@ from Flandre import permissions
 from os import mkdir
 from os.path import isdir
 import json
+import asyncio
 
 class mod:
     '''Moderation tools
@@ -86,6 +87,14 @@ class mod:
                     json.dump({}, file)
                 self.bot.log('info', 'Flandre/data/mod/ignore_list.json has been remade for you')
 
+    def send_cmd_help(self, ctx):
+        if ctx.invoked_subcommand:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
+            return pages
+        else:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.command)
+            return pages
+                
     @commands.command(no_pm=True, pass_context=True)
     @permissions.checkAdmin()
     async def logchannel(self, ctx):
@@ -195,9 +204,9 @@ class mod:
         except dscord.errors.HTTPException:
             await self.bot.say("Something went wrong. Please try again")
 
-    #@commands.group(pass_context=True, no_pm=True)
-    #@permissions.checkMod()
-    #async def cleanup(self, ctx):
+    @commands.group(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def cleanup(self, ctx):
         ''' Deletes messages
 
             cleanup messages [number] - removes number amount of messages
@@ -205,22 +214,99 @@ class mod:
             cleanup text "Text" [number] - removes number amount of messages with text in it
         '''
 
-     #   if ctx.invoked_subcommand is None:
-      #      pages = self.send_cmd_help(ctx)
-       #     for page in pages:
-        #        await self.send_message(ctx.message.channel, page)
+        if ctx.invoked_subcommand is None:
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
 
-    #@cleanup.command(no_pm=True, pass_context=True)
-    #async def text(self, ctx, text : str, number : int):
+    @cleanup.command(no_pm=True, pass_context=True)
+    async def text(self, ctx, text : str, number : int = 1):
         ''' Deletes the last X messages containing the text specified
             Double quotes are needed for the text string
 
             Example: cleanup text "Test" 5
         '''
+        
+        channel = ctx.message.channel
+        message = ctx.message
+        deleted = 0
+        try:
+            await self.bot.delete_message(message)
+            await asyncio.sleep(0.25)
+            while number > 0:
+                async for logMessage in self.bot.logs_from(channel, limit = 10, before = message):
+                    # Check if text is in the message then remove it.
+                    if text in logMessage.content:
+                        await self.bot.delete_message(logMessage)
+                        await asyncio.sleep(0.25)
+                        number -= 1
+                        message = logMessage
+                        deleted += 1
+                    if number == 0:
+                        break
+            if ctx.message.server.id in self.logging_channels:
+                log_channel = self.bot.get_channel(self.logging_channels[ctx.message.server.id])
+                await self.bot.send_message(log_channel, '{0} messages have been removed!'.format(deleted))
+        except discord.erros.Forbidden:
+            await self.bot.say("I can't do that. I lack the permissions to do so")
+                        
+    @cleanup.command(no_pm=True, pass_context=True)
+    async def user(self, ctx, user : discord.Member, number : int = 1):
+        ''' Deletes the last X messages from specified user
+            
+            Example:
+            cleanup user @name 2
+            cleanup user name 2
+        '''
+        
+        channel = ctx.message.channel
+        message = ctx.message
+        deleted = 0
+        
+        try:
+            await self.bot.delete_message(message)
+            await asyncio.sleep(0.25)
+            while number > 0:
+                async for logMessage in self.bot.logs_from(channel, limit = 10, before = message):
+                    # Check if the author of the message is the specified user then remove the message.
+                    if logMessage.author.id in user.id:
+                        await self.bot.delete_message(logMessage)
+                        await asyncio.sleep(0.25)
+                        number -= 1
+                        message = logMessage
+                        deleted += 1
+                    if number == 0:
+                        break
+            if ctx.message.server.id in self.logging_channels:
+                log_channel = self.bot.get_channel(self.logging_channels[ctx.message.server.id])
+                await self.bot.send_message(log_channel, '{0} messages have been removed!'.format(deleted))
+        except discord.erros.Forbidden:
+            await self.bot.say("I can't do that. I lack the permissions to do so")
 
-     #   while deleted != number:
-
-
+    @cleanup.command(no_pm=True, pass_context=True)
+    async def messages(self, ctx, number : int = 1):
+        ''' Deletes the last X messages from specified user
+            
+            Example: cleanup messages 2
+        '''
+        
+        channel = ctx.message.channel
+        message = ctx.message
+        deleted = 0
+        
+        try:
+            await self.bot.delete_message(message)
+            await asyncio.sleep(0.25)
+            async for logMessage in self.bot.logs_from(channel, limit = number, before = message):
+                await self.bot.delete_message(logMessage)
+                await asyncio.sleep(0.25)
+                deleted += 1
+                
+            if ctx.message.server.id in self.logging_channels:
+                log_channel = self.bot.get_channel(self.logging_channels[ctx.message.server.id])
+                await self.bot.send_message(log_channel, '{0} messages have been removed!'.format(deleted))
+        except discord.erros.Forbidden:
+            await self.bot.say("I can't do that. I lack the permissions to do so")
 
 def setup(bot):
     n = mod(bot)
