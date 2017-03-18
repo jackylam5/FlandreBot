@@ -259,7 +259,7 @@ class MusicPlayer:
                 if search:
                     ytdl = youtube_dl.YoutubeDL({'default_search': 'auto' , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 elif sc:
-                    ytdl = youtube_dl.YoutubeDL({'playlistend': 10, 'playlistrandom': True: 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                    ytdl = youtube_dl.YoutubeDL({'playlistend': 10, 'playlistrandom': True, 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 else:
                     ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 9) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 # Send info message
