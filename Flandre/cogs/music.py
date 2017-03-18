@@ -208,7 +208,7 @@ class MusicPlayer:
                         self.votes = []
                         if self.queue:
                             del self.queue[0]
-        except discord.errors.ConnectionClosed as e:
+        except Exception as e:
             self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
             self.bot.log('error', 'Reason: {0}'.format(e))
                                 
