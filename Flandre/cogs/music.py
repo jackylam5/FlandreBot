@@ -831,7 +831,7 @@ class music:
                     if server.id in self.musicplayers:
                         done = await self.musicplayers[server.id].disconnect(self.bot.user, force=True)
                         if done:
-                            if server.id in self.musicplayers
+                            if server.id in self.musicplayers:
                                 del self.musicplayers[server.id]
                             self.bot.log('info', 'Removed Music Player for {0.name} ({0.id})'.format(server))
 
