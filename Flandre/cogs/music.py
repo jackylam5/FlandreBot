@@ -221,6 +221,7 @@ class MusicPlayer:
         else:
             # Check if link is youtube, soundcloud or a search
             search = False
+            sc = False
             if 'youtube.com' in link or 'youtu.be' in link:
                 # Youtube
                 if 'youtu.be' in link:
@@ -236,22 +237,28 @@ class MusicPlayer:
                             start_pos = int(temp[i].replace('index=', '').strip())
                             break
                 valid = True
+                sc = False
             elif 'soundcloud.com' in link:
                 # Soundcloud
                 valid = True
+                sc = True
             else:
                 # Search
                 if link.startswith('http://') or link.startswith('https://'):
                     valid = False
+                    sc = False
                 else:
                     valid = True
                     search = True
+                    sc = False
             # If valid link or search
             if valid:
                 # Download the info from the link
                 # Set ytdl to use startpos and endpos to get info
                 if search:
                     ytdl = youtube_dl.YoutubeDL({'default_search': 'auto' , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                elif sc:
+                    ytdl = youtube_dl.YoutubeDL({'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 else:
                     ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 9) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 # Send info message
