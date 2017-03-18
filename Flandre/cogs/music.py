@@ -200,7 +200,6 @@ class MusicPlayer:
                         if self.player.error is None:
                             await asyncio.sleep(1)
                         else:
-                            print(self.player.error)
                             self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
                             self.bot.log('error', 'Reason: {0}'.format(self.player.error))
                             await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
