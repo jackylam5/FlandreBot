@@ -1,9 +1,9 @@
 {
     "description": "FlandreBot always a work in progress. Written by Jackylam5 and maware",
     "dev_mode": false,
-    "game": "Help = !help",
-    "ownerid": [],
+    "game": "Help = *help",
+    "ownerid": ["130012001236811776", "118747700064813056"],
     "pm_help": true,
-    "prefix": "!",
-    "token": ""
+    "prefix": "*",
+    "token": "MjQwMDE5OTk2NjUzMTI1NjMz.Cu9PkA.L674zOjNPxMxyDoVVe9qZzANNTM"
 }

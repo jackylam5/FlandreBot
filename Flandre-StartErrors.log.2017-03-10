@@ -1,0 +1,4 @@
+2017-03-10 20:25:13,230 - CRITICAL > Config File Missing: [Errno 2] No such file or directory: 'Flandre/config.json'
+2017-03-10 20:25:13,232 - INFO > A config file has been made for you (Flandre/config.json). Please fill it out and restart the bot
+2017-03-10 20:28:12,169 - CRITICAL > Config File Missing: [Errno 2] No such file or directory: 'Flandre/config.json'
+2017-03-10 20:28:12,169 - INFO > A config file has been made for you (Flandre/config.json). Please fill it out and restart the bot
