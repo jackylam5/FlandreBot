@@ -2,6 +2,10 @@ import discord
 from discord.ext import commands
 import youtube-dl
 import asyncio
+from os import mkdir
+from os.path import isdir
+from Flandre import permissions
+import json
 
 class MusicPlayer:
 	''' Music Player Class
@@ -119,7 +123,7 @@ class MusicPlayer:
             await self.bot.send_message(self.text_channel, 'Sorry {0.mention}, You need to be a mod to disconnect me'.format(user))
             return False
 
-    async def crash(self, user):
+    async def crash(self):
         ''' Reconnects the bot but keeps the queue so songs do not need to be added again. 
             While skipping the song that broke it
         '''
@@ -323,4 +327,513 @@ class MusicPlayer:
                     await self.audioPlayer()
             else:
                 await self.bot.send_message(message.channel, '{0.mention}, That was not a valid link or song search')
-                
+    
+    async def skip(self, message, force=False):
+        ''' Start the vote skip or force if done by admin using force skip command
+        '''
+
+        # Check if forced
+        if force:
+            # Check if there is a music player and it is playing
+            if self.player != None and self.player.is_playing():
+                # Skip
+                self.player.stop()
+                await self.bot.send_message(message.channel, '**{0.display_name}** has forced skipped the song'.format(message.author))
+                # Reset skip
+                self.skips_needed = 0
+                self.votes = []
+            else:
+                # Send message saying there is nothing to skip
+                await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be skipped'.format(message.author))
+        else:
+             # If there is a music player and it is playing
+            if self.player != None and self.player.is_playing():
+                # Check if already voted
+                if message.author.id in self.votes:
+                    await self.bot.send_message(message.channel, '{0.mention}, You have already voted to skip'.format(message.author))
+                else:
+                    # First vote skip
+                    if not self.votes:
+                        numofmembers = len(self.voice.channel.voice_members)
+                        self.skips_needed = int(numofmembers*0.6)
+                    # Add users to voted list
+                    self.votes.append(message.author.id)
+                    # Check if max has been reached
+                    if len(self.votes) == self.skips_needed:
+                        await self.bot.send_message(message.channel, '**{0.display_name}** has voted to skip.\nThe vote skip has passed.'.format(message.author))
+                        # Skip
+                        self.player.stop()
+                        # Reset skip
+                        self.skips_needed = 0
+                        self.votes = []
+                    else:
+                        # Say remaning votes left
+                        votes_needed_left = self.skips_needed - len(self.votes)
+                        await self.bot.send_message(message.channel, '**{0.display_name}** has voted to skip.\n**{1}** more votes needed to skip.'.format(message.author, votes_needed_left))
+            else:
+                # Send message saying there is nothing to skip
+                await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be skipped'.format(message.author))
+
+    async def changeVolume(self, message, percent):
+        ''' Change the volume of the bot
+        '''
+
+        if int(percentage) < 0 or int(percentage) > 200:
+            # Send user error message for invalid percentage
+            await self.bot.send_message(message.channel, '{0.mention}, Volume is done by percentage between 0%  and 200%, Please pick a vaild percentage'.format(message.author))
+        else:
+            # Change percentage to a valid number for ffmpeg or avconv
+            self.volume = int(percentage) / 100                        
+            # Make sure there is a player to change the volume for
+            if self.player is not None:
+                self.player.volume = self.volume                        
+            # Send volume has been changed message
+            await self.bot.send_message(message.channel, '{0.mention}, Volume has been changed to: **{1}%**'.format(message.author, percentage))
+
+    async def pauseMusic(self, message):
+        ''' Pauses the music 
+        '''
+        
+        if self.player is not None:
+            self.player.pause()
+            self.pause_time_left = round(self.song_end_time - time.time())
+            await self.bot.send_message(message.channel, ':pause_button: **{0}** is now paused'.format(self.player.title))
+        else:
+            await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be paused'.format(message.author))
+
+    async def resumeMusic(self, message):
+        ''' Resume the music 
+        '''
+
+        if self.player is not None:
+            self.song_end_time = time.time() + self.pause_time_left
+            self.pause_time_left = None
+            self.player.resume()
+            await self.bot.send_message(message.channel, ':arrow_forward:  **{0}** is now playing'.format(self.player.title))
+        else:
+            await self.bot.send_message(message.channel, '{0.mention}, There is nothing paused'.format(message.author))
+
+    async def clearQueue(self, message):
+        ''' Clear the queue 
+        '''
+        
+        del(self.queue[1:])
+        await self.bot.send_message(message.channel, "{0.mention}, The queue has been cleared!!".format(message.author))
+    
+    async def nowPlaying(self, message):
+        ''' Shows the current song that is playing and time left till next song
+        '''
+
+        # Nothing playing
+        if len(self.queue) == 0:
+            await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing'.format(message.author))
+        else:
+            # Get current duration if not paused
+            if self.pause_time_left is None:
+                time_left = round(self.song_end_time - time.time())
+                current_dur = self.player.duration - time_left
+            else:
+                # Get current duration if pasued
+                current_dur = self.player.duration - self.pause_time_left
+            # Split current duration in to hours, mins and seconds
+            m, s = divmod(current_dur, 60)
+            h, m = divmod(m, 60)
+            # Do the same for complete duration
+            fm, fs = divmod(self.player.duration, 60)
+            fh, fm = divmod(dm, 60)
+            # Based on how many hours there is in the song create embed
+            if fh != 0:
+                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]'.format(self.player.title, h, m, s, fh, fm, fs))
+            else:
+                np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** [{1:02d}:{2:02d}/{3:02d}:{4:02d}]'.format(self.player.title, m, s, fm, fs))
+            # Change colour and author message based on if it paused or not
+            if self.pause_time_left is not None:
+                np.colour = discord.Colour(16711680)
+                np.set_author(name='Now Playing [PAUSED]:', url=self.queue[0]['url'])
+            else:
+                np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+            # Put song requester in footer set thumbmail and send
+            np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
+            np.set_thumbnail(url=self.queue[0]['thumbnail'])
+            await self.bot.send_message(message.channel, embed=np)
+
+    async def showQueue(self, message):
+        ''' Show the next few songs in the queue
+        '''
+
+        # If the only the current playing song or nothing is queue tell user
+        if len(self.queue) < 2:
+            await self.bot.send_message(message.channel, '{0.mention}, There are no songs in the queue'.format(message.author))
+        else:
+            # Only one song in queue and check if paused
+            if self.pause_time_left is None:
+                # Get time left and spilt in hours, mins and seconds
+                time_left = round(self.song_end_time - time.time())
+                m, s = divmod(time_left, 60)
+                h, m = divmod(m, 60)
+                # Based on how many hours there is in the song create embed
+                if h != 0:
+                    qe = discord.Embed(type='rich', colour=discord.Colour(65535))
+                    qe.set_author(name='Queue:')
+                    qe.add_field(name='Up Next:', value='**{0[1][title]}** Requested by **{0[1][user]}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s), inline=False)
+                else:
+                    qe = discord.Embed(type='rich', colour=discord.Colour(65535))
+                    qe.set_author(name='Queue:')
+                    qe.add_field(name='Up Next:', value='**{0[1][title]}** Requested by **{0[1][user]}**. Plays in {1:02d}:{2:02d}s'.format(self.queue, m, s), inline=False)
+            else:
+                qe = discord.Embed(type='rich', colour=discord.Colour(65535))
+                qe.set_author(name='Queue:')
+                qe.add_field(name='Up Next:', value='**{0[1][title]}** Requested by **{0[1][user]}**. Current song is *PAUSED*'.format(self.queue), inline=False)
+            # Check for more songs
+            if len(self.queue) > 2:
+                if len(self.queue) < 7:
+                    for i in range(2, len(self.queue)):
+                        qe.add_field(name=str((i-1)), value='{0} - Requested by {1}'.format(self.queue[i]['title'], self.queue[i]['user'], inline=False))
+                else:
+                    for i in range(2, 6):
+                        qe.add_field(name=str((i-1)), value='{0} - Requested by {1}'.format(self.queue[i]['title'], self.queue[i]['user'], inline=False))
+            # Send embed
+            await self.bot.send_message(message.channel, embed=qe)
+
+class music:
+    ''' Music player
+        Create a server music player upon connect command which if music channel is forced
+    '''
+
+     def __init__(self, bot):
+        self.bot = bot
+        self.musicplayers = {}
+        self.music_channels = {}
+        self.loadFiles()
+
+    async def _unload(self):
+        ''' Unload function for when it is unloaded
+        '''
+        for server, player in self.musicplayers.copy().items():
+            await player.disconnect(self.bot.user, force=True, reload=True)
+            self.bot.log('info', 'Forcefully deleted {0} music player'.format(server))
+            del self.musicplayers[server]
+
+    def send_cmd_help(self, ctx):
+        if ctx.invoked_subcommand:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
+            return pages
+        else:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.command)
+            return pages
+
+    def loadFiles(self):
+        ''' Loads the files for the cog stored in cog data folder
+        '''
+
+        if not isdir('Flandre/data/music'):
+            # Make the directory if missing and the files that go with it 
+            self.bot.log('warn', 'Cogs data folder not found, it and all files have been made') 
+            mkdir('Flandre/data/music')
+            with open('Flandre/data/music/music_channels.json', 'w') as file:
+                json.dump({}, file)   
+        else:
+            # Check for music_channels file
+            try:
+                with open('Flandre/data/music/music_channels.json', 'r') as file:
+                    self.music_channels = json.load(file)
+            except (json.decoder.JSONDecodeError, IOError) as e:
+                self.music_channels = {}
+                self.bot.log('error', 'music_channels.json could not be loaded. Reason: {0}'.format(e))                
+                # Make the file for user again
+                with open('Flandre/data/music/music_channels.json', 'w') as file:
+                    json.dump({}, file)
+                self.bot.log('info', 'Flandre/data/music/music_channels.json has been remade for you')
+
+    @commands.command(no_pm=True, pass_context=True)
+    @permissions.checkAdmin()
+    async def setmusicchannel(self, ctx):
+        '''Sets the channel command is typed in as the music channel for that server
+        '''
+
+        removed = False
+        if ctx.message.server.id in self.music_channels:
+            self.music_channels.pop(ctx.message.server.id)
+            removed = True
+        else:
+            self.logging_channels[ctx.message.server.id] = ctx.message.channel.id
+        
+        try:
+            with open('Flandre/data/music/music_channels.json', 'w') as file:
+                json.dump(self.music_channels, file, indent=4, sort_keys=True)
+        except:
+            if removed:
+                await self.bot.say('This channel is no longer the music channel for the server. However is couldn\'t be save for some reason')
+            else:
+                await self.bot.say('This channel has been made the music channel for the server. However is couldn\'t be save for some reason')
+            self.bot.log('critical', 'Flandre/data/music/music_channels.json could not be saved. Please check it')
+        else:
+            if removed:
+                await self.bot.say('This channel is no longer the music channel for the server.')
+                self.bot.log('info', 'Flandre/data/music/music_channels.json has been saved. Reason: {0.name} ({0.id}) is no longer a logging channel'.format(ctx.message.channel))
+            else:
+                await self.bot.say('This channel has been made the music channel for the server.')
+                self.bot.log('info', 'Flandre/data/music/music_channels.json has been saved. Reason: {0.name} ({0.id}) has been made a logging channel'.format(ctx.message.channel))
+
+    @commands.group(pass_context=True, no_pm=True)
+    async def player(self, ctx):
+        ''' Music Player functions
+        '''
+
+        if ctx.invoked_subcommand is None:
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
+
+    @player.command(pass_context=True, no_pm=True)
+    async def connect(self, ctx):
+        ''' Connects Bot to voice channel if not in one. Moves to channel if in already in one
+        '''
+
+        message = ctx.message
+        if message.server.id not in self.music_channels:
+            self.musicplayers[message.server.id] = MusicPlayer(self.bot, message.server)
+            self.bot.log('info', 'Created Music Player for {0.name} ({0.id})'.format(message.server))
+            await self.musicplayers[message.server.id].connect(message)
+        else:
+            if message.channel.id == self.music_channels[message.server.id]:
+                self.musicplayers[message.server.id] = MusicPlayer(self.bot, message.server)
+                self.bot.log('info', 'Created Music Player for {0.name} ({0.id})'.format(message.server))
+                await self.musicplayers[message.server.id].connect(message)
+            else:
+                music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+
+    @player.command(pass_context=True, no_pm=True)
+    async def disconnect(self, ctx):
+        ''' Disconnect the bot from the voice channel (mod only)
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:            
+                done = await self.musicplayers[message.server.id].disconnect(message.author)
+                if done:
+                    del self.musicplayers[message.server.id]
+                    self.bot.log('info', 'Removed Music Player for {0.name} ({0.id})'.format(message.server))
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    done = await self.musicplayers[message.server.id].disconnect(message.author)
+                    if done:
+                        del self.musicplayers[message.server.id]
+                        self.bot.log('info', 'Removed Music Player for {0.name} ({0.id})'.format(message.server))
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def crash(self, ctx):
+        ''' Reconnects the bot but keeps the queue so songs do not need to be added again. 
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:            
+                await self.musicplayers[message.server.id].crash()
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                     await self.musicplayers[message.server.id].crash()
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    async def add(self, ctx, link : str):
+        ''' Add command <Youtube Link/Soundcloud Link/Search term>
+        '''
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].addQueue(message, link)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].addQueue(message, link)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    async def skip(self, ctx):
+        ''' Vote skip
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].skip(message)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].skip(message)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def forceskip(self, ctx):
+        ''' Force skip
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].skip(message, force=True)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].skip(message, force=True)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True, aliases=["vol"])
+    @permissions.checkMod()
+    async def volume(self, ctx, percent : int):
+        ''' Volume command <0 - 200 %>
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].changeVolume(message, percent)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].changeVolume(message, percent)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def pause(self, ctx):
+        ''' Pause current song
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].pauseMusic(message)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].pauseMusic(message)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def resume(self, ctx):
+        ''' Resume current song
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].resumeMusic(message)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].resumeMusic(message)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def clear(self, ctx):
+        ''' Clear the queue
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].clearQueue(message)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].clearQueue(message)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @player.command(pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def queue(self, ctx):
+        ''' Show next few songs in the queue
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].showQueue(message)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].showQueue(message)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    @commands.command(no_pm=True, pass_context=True, aliases=["np"])
+    async def nowplaying(self, ctx):
+        ''' Show current playing song 
+        '''
+
+        message = ctx.message
+        if message.server.id in self.musicplayers:
+            if message.server.id not in self.music_channels:
+                await self.musicplayers[message.server.id].nowPlaying(message)
+            else:
+                if message.channel.id == self.music_channels[message.server.id]:
+                    await self.musicplayers[message.server.id].nowPlaying(message)
+                else:
+                    music_channel = self.bot.get_channel(self.music_channels[message.server.id])
+                    self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
+        else:
+            await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
+
+    async def on_voice_state_update(self, before, after):
+        ''' When voice channel update happens 
+        '''
+        server = after.server
+        if self.bot.is_voice_connected(server):
+            voice = self.bot.voice_client_in(server)
+            channelmembers = voice.channel.voice_members
+            # Do a check then wait 10 seconds if true
+            if len(channelmembers) <= 1:
+                await asyncio.sleep(10)
+                # Do check again
+                channelmembers = voice.channel.voice_members
+                if len(channelmembers) <= 1:
+                    if server.id in self.musicplayers:
+                        done = await self.musicplayers[server.id].disconnect(self.bot.user, force=True)
+                        if done:
+                            del self.musicplayers[server.id]
+                            self.bot.log('info', 'Removed Music Player for {0.name} ({0.id})'.format(server))
+
+def setup(bot):
+    n = music(bot)
+    bot.add_listener(n.on_voice_state_update, "on_voice_state_update")
+    bot.add_cog(n)
