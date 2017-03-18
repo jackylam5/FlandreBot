@@ -217,7 +217,6 @@ class MusicPlayer:
         ''' Adds link to the queue to be played
         '''
 
-        valid = False
         start_pos = 1
         if self.voice is None:
             await self.bot.send_message(message.channel, '{0.mention}, I am not in a voice channel to play music. Please connect me first'.format(message.author))
@@ -226,49 +225,29 @@ class MusicPlayer:
         else:
             # Check if link is youtube, soundcloud or a search
             search = False
-            sc = False
+            # Check for youtube video
             if 'youtube.com' in link or 'youtu.be' in link:
-                # Youtube
                 if 'youtu.be' in link:
-                    # Change share link to normal link
                     vidID = link.split('/')[-1]
                     link = 'https://www.youtube.com/watch?v=' + vidID
-                elif '&index' in link:
-                    # Get start pos for playlist
+                if '&index' in link:
                     temp = link.split('&')
                     for i in range(0, len(temp)):
                         if 'index=' in temp[i]:
                             # Get start pos and end pos
                             start_pos = int(temp[i].replace('index=', '').strip())
-                            break
-                valid = True
-                sc = False
-            elif 'soundcloud.com' in link:
-                # Soundcloud
-                valid = True
-                sc = True
-            else:
-                # Search
-                if link.startswith('http://') or link.startswith('https://'):
-                    valid = False
-                    sc = False
-                else:
-                    valid = True
+                            break                
+                elif 'soundcloud.com' not in link:
                     search = True
-                    sc = False
-            # If valid link or search
-            if valid:
                 # Download the info from the link
                 # Set ytdl to use startpos and endpos to get info
                 if search:
                     ytdl = youtube_dl.YoutubeDL({'default_search': 'auto' , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
-                elif sc:
-                    ytdl = youtube_dl.YoutubeDL({'playlistend': 10, 'playlistrandom': True, 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 else:
-                    ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 9) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                    ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 24) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 # Send info message
                 msg = 'Getting info from link. This might take a while please wait'
-                temp_mesg = await self.bot.send_message(message.channel, msg)
+                temp_mesg = await self.bot.send_message(message.channel, msg.format(message))
                 # Get info
                 try:
                     result = ytdl.extract_info(link, download=False)
@@ -308,10 +287,7 @@ class MusicPlayer:
                         else:
                             if queued > 0:
                                 # Tell the user how many songs have been queued                 
-                                if sc:
-                                    msg = 'Queued: **{0}** random songs'
-                                else:
-                                    msg = 'Queued: **{0}** songs'
+                                msg = 'Queued: **{0}** songs'
                             else:
                                 msg = 'No songs were added'
                             if self.time_left_paused is not None:
