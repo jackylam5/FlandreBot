@@ -143,3 +143,184 @@ class MusicPlayer:
         else:
             await self.client.send_message(self.text_channel, "Reconnected.")
 
+    async def audioPlayer(self):
+        ''' Used to play the songs in the queue until queue is empty
+        '''
+
+        while True:
+            # Check if queue is empty
+            if len(self.queue) == 0:
+                if self.player != None:
+                    self.player.stop()
+                self.player = None
+                break
+            else:
+                # Stop the last song played
+                if self.player is not None:
+                    self.player.stop()
+                # Play the audio
+
+                try:
+                    kwargs = {'use_avconv': False}
+                    # Make youtube_dl download song
+                    self.player = await self.voice.create_ytdl_player(url, ytdl_options={'quiet': True},**kwargs)
+                    # Set volume
+                    self.player.volume = self.volume
+                except youtube_dl.utils.ExtractorError:
+                    # Display error message is blocked
+                    temp_msg = "Sorry {0} is blocked in my country"
+                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
+                except youtube_dl.utils.DownloadError:
+                    # Display error message is blocked
+                    temp_msg = "Sorry {0} is blocked in my country"
+                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
+                else:
+                    # Get hours, mins and seconds
+                    m, s = divmod(int(self.player.duration), 60)
+                    h, m = divmod(m, 60)
+                    # Create playing embed
+                    np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.queue[0]['title'], h, m, s))
+                    np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+                    np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
+                    np.set_thumbnail(url=self.queue[0]['thumbnail'])
+                    # Send the now playing embed and start player
+                    await self.bot.send_message(self.text_channel, embed=np)
+                    await asyncio.sleep(1)
+                    self.player.start()
+                    self.song_end_time = time.time() + self.player.duration
+                    # Sleep while music is playing and did not error
+                    while self.player.is_playing() or not self.player.is_done():
+                        if self.player.error is None:
+                            await asyncio.sleep(1)
+                        else:
+                            self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
+                            self.bot.log('error', 'Reason: {0}'.format(self.player.error))
+                            await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
+                            break
+                    # Clear the queue of that song and reset skip
+                    self.skips_needed = 0
+                    self.votes = []
+                    if self.queue:
+                        del self.queue[0]
+
+    async def addQueue(self, message, link):
+        ''' Adds link to the queue to be played
+        '''
+
+        valid = False
+        start_pos = 1
+        if self.voice is None:
+            await self.bot.send_message(message.channel, '{0.mention}, I am not in a voice channel to play music. Please connect me first'.format(message.author))
+        elif message.author.voice_channel != self.voice.channel:
+            await self.bot.send_message(message.channel, '{0.mention}, You need to be in my voice channel to add a song'.format(message.author))
+        else:
+            # Check if link is youtube, soundcloud or a search
+            search = False
+            if 'youtube.com' in link or 'youtu.be' in link:
+                # Youtube
+                if 'youtu.be' in link:
+                    # Change share link to normal link
+                    vidID = link.split('/')[-1]
+                    link = 'https://www.youtube.com/watch?v=' + vidID
+                elif '&index' in link:
+                    # Get start pos for playlist
+                    temp = link.split('&')
+                    for i in range(0, len(temp)):
+                        if 'index=' in temp[i]:
+                            # Get start pos and end pos
+                            start_pos = int(temp[i].replace('index=', '').strip())
+                            break
+                valid = True
+            elif 'soundcloud.com' in link:
+                # Soundcloud
+                valid = True
+            else:
+                # Search
+                if link.startswith('http://') or link.startswith('https://')
+                    valid = False
+                else:
+                    valid = True
+                    search = True
+            # If valid link or search
+            if valid:
+                # Download the info from the link
+                # Set ytdl to use startpos and endpos to get info
+                if search:
+                    ytdl = youtube_dl.YoutubeDL({'default_search': 'auto' , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                else:
+                    ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 9) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                # Send info message
+                msg = 'Getting info from link. This might take a while please wait'
+                temp_mesg = await self.bot.send_message(message.channel, msg)
+                # Get info
+                try:
+                    result = ytdl.extract_info(link, download=False)
+                except youtube_dl.utils.DownloadError as e:
+                    # Invalid Link
+                    if 'Incomplete YouTube ID' in str(e):
+                        msg = '{0.mention}, Not a valid Youtube link'
+                        await self.bot.edit_message(temp_mesg, msg.format(message.author))
+                    elif 'Unable to download JSON metadata' in str(e):
+                        msg = '{0.mention}, Not a valid Soundcloud link'
+                        await self.bot.edit_message(temp_mesg, msg.format(message.author))
+                else:
+                    # Check if playlist was downloaded
+                    if 'entries' in result:
+                        queued = 0
+                        for song in result['entries']:  
+                            # Get song url, title and requester
+                            if song is not None:
+                                url = song['webpage_url']
+                                title = song['title']
+                                thumbnail = song['thumbnail']
+                                user = message.author.display_name
+                                # Add song to queue
+                                self.queue.append({'url': url, 'title': title, 'user': user, 'thumbnail': thumbnail})
+                                queued += 1
+                            else:
+                                self.bot.log('warn', "Video in {0}, could not be downloaded. Server: {1.name} ({1.id})".format(link, self.server))
+                        # If search term added
+                        if search:
+                            msg = ':notes: Queued: **{0}**'
+                            if self.time_left_paused is not None:
+                                msg += ' Current song is *PAUSED*'
+                            if result['entries'] is None:
+                                await self.bot.edit_message(temp_mesg, "Video {0}, could not be downloaded".format(link))
+                            else:
+                                await self.bot.edit_message(temp_mesg, msg.format(result['entries'][0]['title']))
+                        else:
+                            if queued > 0:
+                                # Tell the user how many songs have been queued                 
+                                msg = 'Queued: **{0}** songs'
+                            else:
+                                msg = 'No songs were added'
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
+                            await self.bot.edit_message(temp_mesg, msg.format(str(queued)))
+                    else:
+                        # Single song
+                        # Get song url, title and requester
+                        if result is not None:
+                            url = result['webpage_url']
+                            title = result['title']
+                            thumbnail= result['thumbnail']
+                            user = message.author.display_name                    
+                            # Add song to queue
+                            self.queue.append({'url': url, 'title': title, 'user': user, 'thumbnail': thumbnail})
+                            # Tell the user the song has been queued
+                            msg = ':notes: Queued: **{0}**'
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
+                            await self.bot.edit_message(temp_mesg, msg.format(title))
+                        else:
+                            msg = 'Could not add that link to queue'
+                            if self.pause_time_left is not None:
+                                msg += ' Current song is *PAUSED*'
+                            await self.bot.edit_message(temp_mesg, msg)
+                            self.bot.log('warn', "Video from {1}, could not be downloaded. Server: {1.name} ({1.id})".format(link, self.server)) 
+                # Start player is not already playing
+                if self.player is None and len(self.queue) > 0:
+                    await self.audioPlayer()
+            else:
+                await self.bot.send_message(message.channel, '{0.mention}, That was not a valid link or song search')
+                
