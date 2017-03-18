@@ -194,12 +194,11 @@ class MusicPlayer:
                     self.player.start()
                     self.time_song_ends = time.time() + self.player.duration
                     # Sleep while music is playing and did not error
-                    while self.player.is_playing() and not self.player.is_done():
+                    while self.player.is_playing() or not self.player.is_done():
                         if self.player.error is None:
                             await asyncio.sleep(1)
                         else:
-                            self.player.stop()
-                            elf.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
+                            self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
                             self.bot.log('error', 'Reason: {0}'.format(self.player.error))
                             await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
                             break
@@ -259,7 +258,7 @@ class MusicPlayer:
                 if search:
                     ytdl = youtube_dl.YoutubeDL({'default_search': 'auto' , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 elif sc:
-                    ytdl = youtube_dl.YoutubeDL({'playlistend': 25 ,'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                    ytdl = youtube_dl.YoutubeDL({'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 else:
                     ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 9) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 # Send info message
