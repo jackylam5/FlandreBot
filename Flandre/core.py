@@ -34,7 +34,7 @@ class Bot(commands.Bot):
             self.logger.warning("Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config 
-        super().__init__(command_prefix = self.config['prefix'], description = self.config['description'], pm_help = self.config['pm_help'])
+        super().__init__(command_prefix = commands.when_mentioned_or(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
 
     def log(self, logtype, message):
         ''' Log the info supplied by the user
