@@ -8,6 +8,15 @@ from Flandre import permissions
 import json
 import time
 
+class Song:
+    ''' Song Class used to store song information in the queue so it can be easily accessed
+    '''
+    def __init__(self, url, title, thumbnail, requester):
+        self.url = url
+        self.title = title
+        self.thumbnail = thumbnail
+        self.requester = requester
+
 class MusicPlayer:
     ''' Music Player Class
         Manages connecting and disconnecting of the bot to that server
@@ -15,24 +24,69 @@ class MusicPlayer:
     '''
 
     def __init__(self, bot, server):
-        # The bot and the sever this music player is for
+        # The bot and the server this music player is for
         self.bot = bot
         self.server = server
         # Channel to post now playing to (default to the servers default channel)
         self.text_channel = server.default_channel
-        # Voice connection and the actual player(youtube-dl)
+        # Voice connection and the actual player(youtube-dl) for the server
         self.voice = None
         self.player = None
+        # asyncio Events for if there are songs in queue and if the next song is to be played
+        self.play_next_song = asyncio.Event()
+        self.songs_in_queue = asyncio.Event()
         # Player volume - 1 is 100% (Max: 2, Min: 0)
-        self.volume = 0.15 
-        # Queue will hold the song name, thumbnail for song, the url for that song and the name of the person that requested it in a dictionary
+        self.volume = 0.15
+        # Queue and current song
         self.queue = []
+        self.current_song = None
         # Duration used to get how long the song has left for show queue and now playing
         self.time_song_ends = None
         self.time_left_paused = None
-        # Skipping current song
-        self.skip_votes_needed = 0
-        self.skip_votes = []
+        # Skips
+        self.skips = set()
+        self.audio_player = self.bot.loop.create_task(self.audioPlayer())
+
+    def toggle_next(self):
+        self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
+    
+    async def audioPlayer(self):
+        ''' Background task that waits for a song to be in the queue
+            before playing the song
+        '''
+
+        while True:
+            # Wait until songs are in the queue
+            await self.songs_in_queue.wait()
+            self.songs_in_queue.clear()
+            self.play_next_song.clear()
+            self.current_song = self.queue.pop()
+            # Make youtube_dl download song
+            kwargs = {'use_avconv': False}
+            self.player = await self.voice.create_ytdl_player(self.current_song.url, ytdl_options={'quiet': True}, after=self.toggle_next, **kwargs)
+            # Set volume
+            self.player.volume = self.volume
+            # Get hours, mins and seconds
+            m, s = divmod(int(self.player.duration), 60)
+            h, m = divmod(m, 60)
+            # Create playing embed
+            np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.player.title, h, m, s))
+            np.set_author(name='Now Playing:', url=self.player.url)
+            np.set_footer(text='Requested by {0}'.format(self.current_song.requester.display_name))
+            np.set_thumbnail(url=self.current_song.thumbnail)
+            # Send the now playing embed and start player
+            await self.bot.send_message(self.text_channel, embed=np)
+            # Start the player and wait until it is done
+            self.player.start()
+            self.time_song_ends = time.time() + self.player.duration
+            await self.play_next_song.wait()
+            # If more songs in queue make it play and not wait
+            if len(self.queue) != 0:
+                self.songs_in_queue.set()
+            # Reset skip
+            self.skips.clear()
+            self.current_song = None
+
 
     def checkMod(self, user):
         ''' Check if user is mod needed as some admin commands can be used by non-admins
@@ -45,7 +99,6 @@ class MusicPlayer:
             return True
         else:
             return False
-    
 
     async def connect(self, message):
         ''' Connects Bot to voice channel if not in one
@@ -56,16 +109,15 @@ class MusicPlayer:
         # Check if user is in a voice channel to connect to
         if message.author.voice_channel is None:
             await self.bot.send_message(message.channel, "{0.mention}, You need to be in a voice channel I can connect to.".format(message.author))
-        else:           
-            # Check if the player says there is no voice connection but the bot is still connected
+        else:
+            # Check is the bot is still connected to voice but not saved to self.voice
             if self.voice is None and self.bot.is_voice_connected(self.server):
-                # Log error and set self.voice to that connection 
-                self.bot.log('warn', 'Voice still connected in {0.name} ({0.id}). Setting voice back to that.'.format(self.server))
-                self.voice = self.bot.voice_client_in(self.server)                
-                # Check user that connected bot is in different channel if so move there
-                if message.author.voice_channel is not self.voice.channel:
-                    self.bot.log('warn', 'Voice still connected in {0.name} ({0.id}). Had to move channel after setting it back'.format(self.server))
+                self.voice = self.bot.voice_client_in(self.server)
+                if message.author.voice_channel is not self.voice.channel and self.checkMod(message.author):
                     await self.voice.move_to(message.author.voice_channel)
+                    self.bot.log('warn', 'Voice still connected in {0.name} ({0.id}). Had to move channel after setting it back'.format(self.server))
+                else:
+                    self.bot.log('warn', 'Voice still connected in {0.name} ({0.id}). Setting voice back to that.'.format(self.server))
             else:
                 # Check is user is allowed to connect bot (mod or not already connected)
                 if self.checkMod(message.author) or self.voice is None:
@@ -74,14 +126,16 @@ class MusicPlayer:
                         # Check not already connected to that channel
                         if message.author.voice_channel is not self.voice.channel:
                             await self.voice.move_to(message.author.voice_channel)
+                            self.text_channel = message.channel
+                            await self.bot.send_message(message.channel, 'Connected to **{0}** and bound to this text channel'.format(message.author.voice_channel.name))
                         else:
                             await self.bot.send_message(message.channel, "{0.mention}, I'm already in your voice channel".format(message.author))
                     else:
                         # Connect to that voice channel
                         self.voice = await self.bot.join_voice_channel(message.author.voice_channel)
-                    # Set text channel to the channel the message was sent in
-                    self.text_channel = message.channel
-                    await self.bot.send_message(message.channel, 'Connected to **{0}** and bound to this text channel'.format(message.author.voice_channel.name))
+                        # Set text channel to the channel the message was sent in
+                        self.text_channel = message.channel
+                        await self.bot.send_message(message.channel, 'Connected to **{0}** and bound to this text channel'.format(message.author.voice_channel.name))
                 else:
                     # Tell user they cannot move bot (as they can connect if bot is not already connected)
                     await self.bot.send_message(message.channel, 'Sorry {0.mention}, You need to be a mod to move me if someone else is listening to music'.format(message.author))
@@ -98,10 +152,8 @@ class MusicPlayer:
             # Clear the queue
             self.queue = []
             # Skip current song
-            if self.player != None:
+            if self.player is not None and not self.player.is_done():
                 self.player.stop()
-            self.skips_needed = 0
-            self.votes = []
             # Disconnect voice
             if self.bot.is_voice_connected(self.server):
                 await self.voice.disconnect()
@@ -124,16 +176,13 @@ class MusicPlayer:
             await self.bot.send_message(self.text_channel, 'Sorry {0.mention}, You need to be a mod to disconnect me'.format(user))
             return False
 
-    async def crash(self, ws=False):
+    async def crash(self,):
         ''' Reconnects the bot but keeps the queue so songs do not need to be added again. 
             While skipping the song that broke it
         '''
 
-        # Make a copy of current queue minus current song
-        if ws:
-            tempqueue = self.queue
-        else:
-            tempqueue = self.queue[1:]
+        # Make a copy of current queue 
+        tempqueue = self.queue
         # Get the current voice channel
         channel = self.voice.channel
         # Log current song and server that people said crashed
@@ -147,68 +196,9 @@ class MusicPlayer:
         # Start playing again
         if self.player is None and len(self.queue) > 0:
             await self.bot.send_message(self.text_channel, "Reconnected. Will start playing the next song")
-            await self.audioPlayer()
+            self.songs_in_queue.set()
         else:
             await self.client.send_message(self.text_channel, "Reconnected.")
-
-    async def audioPlayer(self):
-        ''' Used to play the songs in the queue until queue is empty
-        '''
-
-        while True:
-            # Check if queue is empty
-            if len(self.queue) == 0:
-                if self.player != None:
-                    self.player.stop()
-                self.player = None
-                break
-            else:
-                # Stop the last song played
-                if self.player is not None:
-                    self.player.stop()
-                # Play the audio
-                try:
-                    kwargs = {'use_avconv': True}
-                    # Make youtube_dl download song
-                    self.player = await self.voice.create_ytdl_player(self.queue[0]['url'], ytdl_options={'quiet': True},**kwargs)
-                    # Set volume
-                    self.player.volume = self.volume
-                except youtube_dl.utils.ExtractorError:
-                    # Display error message is blocked
-                    temp_msg = "Sorry {0} is blocked in my country"
-                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
-                except youtube_dl.utils.DownloadError:
-                    # Display error message is blocked
-                    temp_msg = "Sorry {0} is blocked in my country"
-                    await self.bot.send_message(self.text_channel, temp_msg.format(self.queue[0]['title']))
-                else:
-                    # Get hours, mins and seconds
-                    m, s = divmod(int(self.player.duration), 60)
-                    h, m = divmod(m, 60)
-                    # Create playing embed
-                    np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.queue[0]['title'], h, m, s))
-                    np.set_author(name='Now Playing:', url=self.queue[0]['url'])
-                    np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
-                    np.set_thumbnail(url=self.queue[0]['thumbnail'])
-                    # Send the now playing embed and start player
-                    await self.bot.send_message(self.text_channel, embed=np)
-                    await asyncio.sleep(1)
-                    self.player.start()
-                    self.time_song_ends = time.time() + self.player.duration
-                    # Sleep while music is playing and did not error
-                    while self.player.is_playing() and not self.player.is_done() and self.player.error is None:
-                        if self.player.error is None:
-                            await asyncio.sleep(1)
-                        else:
-                            self.bot.log('error', '{0.title} ({0.url}) has sent an error.'.format(self.player))
-                            self.bot.log('error', 'Reason: {0}'.format(self.player.error))
-                            await self.bot.send_message(self.text_channel, '{0.title} ({0.url}) has stopped due to an error (LOGGED). Playing next song!'.format(self.player))
-                            break
-                    # Clear the queue of that song and reset skip
-                    self.skips_needed = 0
-                    self.votes = []
-                    if self.queue:
-                        del self.queue[0]
 
     async def addQueue(self, message, link):
         ''' Adds link to the queue to be played
@@ -287,9 +277,9 @@ class MusicPlayer:
                                 url = song['webpage_url']
                                 title = song['title']
                                 thumbnail = song['thumbnail']
-                                user = message.author.display_name
+                                user = message.author
                                 # Add song to queue
-                                self.queue.append({'url': url, 'title': title, 'user': user, 'thumbnail': thumbnail})
+                                self.queue.append(Song(url, title, thumbnail, user))
                                 queued += 1
                             else:
                                 self.bot.log('warn', "Video in {0}, could not be downloaded. Server: {1.name} ({1.id})".format(link, self.server))
@@ -321,9 +311,9 @@ class MusicPlayer:
                             url = result['webpage_url']
                             title = result['title']
                             thumbnail= result['thumbnail']
-                            user = message.author.display_name                    
+                            user = message.author                    
                             # Add song to queue
-                            self.queue.append({'url': url, 'title': title, 'user': user, 'thumbnail': thumbnail})
+                            self.queue.append(Song(url, title, thumbnail, user))
                             # Tell the user the song has been queued
                             msg = ':notes: Queued: **{0}**'
                             if self.time_left_paused is not None:
@@ -336,56 +326,38 @@ class MusicPlayer:
                             await self.bot.edit_message(temp_mesg, msg)
                             self.bot.log('warn', "Video from {1}, could not be downloaded. Server: {1.name} ({1.id})".format(link, self.server)) 
                 # Start player is not already playing
-                if self.player is None and len(self.queue) > 0:
-                    await self.audioPlayer()
+                if len(self.queue) != 0:
+                    self.songs_in_queue.set()
             else:
-                await self.bot.send_message(message.channel, '{0.mention}, That was not a valid link or song search')
-    
+                await self.bot.send_message(message.channel, '{0.mention}, That was not a valid link or song search'.format(message.author))
+
     async def skip(self, message, force=False):
         ''' Start the vote skip or force if done by admin using force skip command
         '''
 
-        # Check if forced
-        if force:
-            # Check if there is a music player and it is playing
-            if self.player != None and self.player.is_playing():
-                # Skip
+        # Check if there is a music player and it is playing
+        if self.player != None and self.player.is_playing():
+            # Check if forced
+            if force:
+                self.skips.clear()
                 self.player.stop()
-                await self.bot.send_message(message.channel, '**{0.display_name}** has forced skipped the song'.format(message.author))
-                # Reset skip
-                self.skips_needed = 0
-                self.votes = []
+                await self.bot.send_message(message.channel, '**{0.display_name}** has forced skipped the song'.format(message.author))                
             else:
-                # Send message saying there is nothing to skip
-                await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be skipped'.format(message.author))
-        else:
-             # If there is a music player and it is playing
-            if self.player != None and self.player.is_playing():
-                # Check if already voted
-                if message.author.id in self.votes:
-                    await self.bot.send_message(message.channel, '{0.mention}, You have already voted to skip'.format(message.author))
-                else:
-                    # First vote skip
-                    if not self.votes:
-                        numofmembers = len(self.voice.channel.voice_members)
-                        self.skips_needed = int(numofmembers*0.6)
-                    # Add users to voted list
-                    self.votes.append(message.author.id)
-                    # Check if max has been reached
-                    if len(self.votes) == self.skips_needed:
-                        await self.bot.send_message(message.channel, '**{0.display_name}** has voted to skip.\nThe vote skip has passed.'.format(message.author))
-                        # Skip
+                if message.author.id not in self.skips:
+                    self.skips.add(message.author.id)
+                    total_votes = len(self.skips)
+                    if total_votes >= 3:
+                        self.skips.clear()
                         self.player.stop()
-                        # Reset skip
-                        self.skips_needed = 0
-                        self.votes = []
+                        await self.bot.send_message(message.channel, '**{0.display_name}** has voted to skip.\nThe vote skip has passed.'.format(message.author))
                     else:
-                        # Say remaning votes left
-                        votes_needed_left = self.skips_needed - len(self.votes)
-                        await self.bot.send_message(message.channel, '**{0.display_name}** has voted to skip.\n**{1}** more votes needed to skip.'.format(message.author, votes_needed_left))
-            else:
-                # Send message saying there is nothing to skip
-                await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be skipped'.format(message.author))
+                        await self.bot.send_message(message.channel, '**{0.display_name}** has voted to skip [{1}/3].'.format(message.author, total_votes))
+                else:
+                    await self.bot.send_message(message.channel, '{0.mention}, You have already voted to skip'.format(message.author))
+
+        else:
+            # Send message saying there is nothing to skip
+            await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing to be skipped'.format(message.author))
 
     async def changeVolume(self, message, percent):
         ''' Change the volume of the bot
@@ -430,15 +402,15 @@ class MusicPlayer:
         ''' Clear the queue 
         '''
         
-        del(self.queue[1:])
+        self.queue = []
         await self.bot.send_message(message.channel, "{0.mention}, The queue has been cleared!!".format(message.author))
-    
+
     async def nowPlaying(self, message):
         ''' Shows the current song that is playing and time left till next song
         '''
 
         # Nothing playing
-        if len(self.queue) == 0:
+        if self.current_song is None:
             await self.bot.send_message(message.channel, '{0.mention}, There is nothing playing'.format(message.author))
         else:
             # Get current duration if not paused
@@ -462,12 +434,12 @@ class MusicPlayer:
             # Change colour and author message based on if it paused or not
             if self.time_left_paused is not None:
                 np.colour = discord.Colour(16711680)
-                np.set_author(name='Now Playing [PAUSED]:', url=self.queue[0]['url'])
+                np.set_author(name='Now Playing [PAUSED]:', url=self.player.url)
             else:
-                np.set_author(name='Now Playing:', url=self.queue[0]['url'])
+                np.set_author(name='Now Playing:', url=self.player.url)
             # Put song requester in footer set thumbmail and send
-            np.set_footer(text='Requested by {0}'.format(self.queue[0]['user']))
-            np.set_thumbnail(url=self.queue[0]['thumbnail'])
+            np.set_footer(text='Requested by {0}'.format(self.current_song.requester.display_name))
+            np.set_thumbnail(url=self.current_song.thumbnail)
             await self.bot.send_message(message.channel, embed=np)
 
     async def showQueue(self, message):
@@ -475,10 +447,9 @@ class MusicPlayer:
         '''
 
         # If the only the current playing song or nothing is queue tell user
-        if len(self.queue) < 2:
+        if len(self.queue) == 0:
             await self.bot.send_message(message.channel, '{0.mention}, There are no songs in the queue'.format(message.author))
         else:
-            # Only one song in queue and check if paused
             if self.time_left_paused is None:
                 # Get time left and spilt in hours, mins and seconds
                 time_left = round(self.time_song_ends - time.time())
@@ -488,23 +459,23 @@ class MusicPlayer:
                 if h != 0:
                     qe = discord.Embed(type='rich', colour=discord.Colour(65535))
                     qe.set_author(name='Queue:')
-                    qe.add_field(name='Up Next:', value='**{0[1][title]}** - Requested by **{0[1][user]}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s), inline=False)
+                    qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s), inline=False)
                 else:
                     qe = discord.Embed(type='rich', colour=discord.Colour(65535))
                     qe.set_author(name='Queue:')
-                    qe.add_field(name='Up Next:', value='**{0[1][title]}** - Requested by **{0[1][user]}**. Plays in {1:02d}:{2:02d}s'.format(self.queue, m, s), inline=False)
+                    qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}s'.format(self.queue, m, s), inline=False)
             else:
                 qe = discord.Embed(type='rich', colour=discord.Colour(65535))
                 qe.set_author(name='Queue:')
-                qe.add_field(name='Up Next:', value='**{0[1][title]}** - Requested by **{0[1][user]}**. Current song is *PAUSED*'.format(self.queue), inline=False)
+                qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Current song is *PAUSED*'.format(self.queue), inline=False)
             # Check for more songs
-            if len(self.queue) > 2:
-                if len(self.queue) < 7:
-                    for i in range(2, len(self.queue)):
-                        qe.add_field(name='{0}:'.format(str((i-1))), value='{0} - Requested by {1}'.format(self.queue[i]['title'], self.queue[i]['user'], inline=False))
+            if len(self.queue) > 1:
+                if len(self.queue) < 6:
+                    for i in range(1, len(self.queue)):
+                        qe.add_field(name='{0}:'.format(str((i))), value='{0} - Requested by {1}'.format(self.queue[i].title, self.queue[i].requester.display_name, inline=False))
                 else:
-                    for i in range(2, 6):
-                        qe.add_field(name='{0}:'.format(str((i-1))), value='{0} - Requested by {1}'.format(self.queue[i]['title'], self.queue[i]['user'], inline=False))
+                    for i in range(1, 5):
+                        qe.add_field(name='{0}:'.format(str((i))), value='{0} - Requested by {1}'.format(self.queue[i].title, self.queue[i].requester.display_name, inline=False))
             # Send embed
             await self.bot.send_message(message.channel, embed=qe)
 
