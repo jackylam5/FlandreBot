@@ -458,7 +458,7 @@ class MusicPlayer:
                 # Based on how many hours there is in the song create embed
                 if h != 0:
                     qe = discord.Embed(type='rich', colour=discord.Colour(65535))
-                    qe.set_author(name='Queue:')
+                    qe.set_author(name='Queue')
                     qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s), inline=False)
                 else:
                     qe = discord.Embed(type='rich', colour=discord.Colour(65535))
