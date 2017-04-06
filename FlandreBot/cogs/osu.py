@@ -274,6 +274,9 @@ class osu():
                     
                 if beatmapID == None:
                     return
+                    
+                if 'test2' in message.content.lower():
+                    await self.bot.send_message(message.channel, testTextTest)
 
                 getScoreUrl = "https://osu.ppy.sh/api/get_user_recent?k={0}&u={1}"
                 with aiohttp.ClientSession() as aioclient:
@@ -289,7 +292,6 @@ class osu():
                             beatmapSet = False
                             miss = int(score['countmiss'])
                             combo = int(score['maxcombo'])
-                            
                             count300 = int(score['count300'])
                             count100 = int(score['count100'])
                             count50 = int(score['count50'])
@@ -508,7 +510,6 @@ class osu():
                 od = float(data[0]['diff_overall'])
                 ar = float(data[0]['diff_approach'])
                 hp = float(data[0]['diff_drain'])
-                
                 if data[0]['mode'] is '0':
                     # osu! std
                     # Get beatmap for PP 
@@ -522,7 +523,9 @@ class osu():
                             proc = Popen(['./oppai', '-', mods, percent, str(combo) + 'x', str(miss) + 'm'], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
                         else:
                             proc = Popen(['./oppai', '-', percent, str(combo) + 'x', str(miss) + 'm'], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-                    elif miss == 0 and mods != '':
+                    elif miss == 0 and combo != 0 and mods != '':
+                        proc = Popen(['./oppai', '-', mods, percent, str(combo) + 'x'], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+                    elif miss == 0 and combo == 0 and mods != '':
                         proc = Popen(['./oppai', '-', mods, percent], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
                     else:
                         proc = Popen(['./oppai', '-', percent], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
@@ -744,7 +747,7 @@ class osu():
                     getPower = cur - 1
                     modFromPower = pow(2, getPower)
                     mods.append(modFromPower)
-                    number = number - curNumber
+                    number = number - modFromPower
                     cur = 0
                 else:
                     cur += 1
@@ -779,7 +782,7 @@ class osu():
                 "3k",
                 "2k",
                 ]
-            
+                
             for i in mods:
                 if i == 1:
                     modsList.append(modlist[0])
@@ -837,11 +840,11 @@ class osu():
                     modsList.append(modlist[26])
                 elif i == 268435456:
                     modsList.append(modlist[27])
-            
+                    
             currentMods = ''
             for mod in modsList:
-                currentMods = currentMods + mod + ' '
-            return currentMods[:-1]
+                currentMods = currentMods + mod
+            return currentMods
                     
                 
 def setup(bot):
