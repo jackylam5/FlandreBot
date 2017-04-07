@@ -198,7 +198,7 @@ class MusicPlayer:
             await self.bot.send_message(self.text_channel, "Reconnected. Will start playing the next song")
             self.songs_in_queue.set()
         else:
-            await self.client.send_message(self.text_channel, "Reconnected.")
+            await self.bot.send_message(self.text_channel, "Reconnected.")
 
     async def addQueue(self, message, link):
         ''' Adds link to the queue to be played
@@ -498,14 +498,6 @@ class music:
             self.bot.log('info', 'Forcefully deleted {0} music player'.format(server))
             del self.musicplayers[server]
 
-    def send_cmd_help(self, ctx):
-        if ctx.invoked_subcommand:
-            pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
-            return pages
-        else:
-            pages = self.bot.formatter.format_help_for(ctx, ctx.command)
-            return pages
-
     def loadFiles(self):
         ''' Loads the files for the cog stored in cog data folder
         '''
@@ -559,17 +551,7 @@ class music:
                 await self.bot.say('This channel has been made the music channel for the server.')
                 self.bot.log('info', 'Flandre/data/music/music_channels.json has been saved. Reason: {0.name} ({0.id}) has been made a logging channel'.format(ctx.message.channel))
 
-    @commands.group(pass_context=True, no_pm=True)
-    async def player(self, ctx):
-        ''' Music Player functions
-        '''
-
-        if ctx.invoked_subcommand is None:
-            pages = self.send_cmd_help(ctx)
-            for page in pages:
-                await self.bot.send_message(ctx.message.channel, page)
-
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def connect(self, ctx):
         ''' Connects Bot to voice channel if not in one. Moves to channel if in already in one
         '''
@@ -588,7 +570,7 @@ class music:
                 music_channel = self.bot.get_channel(self.music_channels[message.server.id])
                 await self.bot.say('Music commands need to be done in {0.mention}'.format(music_channel))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def disconnect(self, ctx):
         ''' Disconnect the bot from the voice channel (mod only)
         '''
@@ -612,7 +594,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     @permissions.checkMod()
     async def crash(self, ctx):
         ''' Reconnects the bot but keeps the queue so songs do not need to be added again. 
@@ -631,7 +613,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def add(self, ctx, link : str):
         ''' Add command <Youtube Link/Soundcloud Link/Search term>
         '''
@@ -648,7 +630,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def skip(self, ctx):
         ''' Vote skip
         '''
@@ -666,7 +648,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     @permissions.checkMod()
     async def forceskip(self, ctx):
         ''' Force skip
@@ -685,7 +667,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True, aliases=["vol"])
+    @commands.command(pass_context=True, no_pm=True, aliases=["vol"])
     @permissions.checkMod()
     async def volume(self, ctx, percent : int):
         ''' Volume command <0 - 200 %>
@@ -704,7 +686,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     @permissions.checkMod()
     async def pause(self, ctx):
         ''' Pause current song
@@ -723,7 +705,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     @permissions.checkMod()
     async def resume(self, ctx):
         ''' Resume current song
@@ -742,7 +724,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     @permissions.checkMod()
     async def clear(self, ctx):
         ''' Clear the queue
@@ -761,7 +743,7 @@ class music:
         else:
             await self.bot.send_message(message.channel, "{0.mention}, I am currently not connected to a voice channel".format(message.author))
 
-    @player.command(pass_context=True, no_pm=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def queue(self, ctx):
         ''' Show next few songs in the queue
         '''
