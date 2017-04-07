@@ -218,6 +218,13 @@ class Bot(commands.Bot):
         else:
             return super().start(self.config['token'])
 
+    async def on_command_error(self, error, ctx):
+        if isinstance(error, commands.NoPrivateMessage):
+            await self.send_message(ctx.message.author, 'This command cannot be used in private messages.')
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await self.send_message(ctx.message.channel, 'You are missing an argument from this command. Please check what it is and try again')
+            
+
     async def on_ready(self):
         ''' When bot has fully logged on 
         Log bots username and ID
