@@ -60,7 +60,7 @@ class MusicPlayer:
             await self.songs_in_queue.wait()
             self.songs_in_queue.clear()
             self.play_next_song.clear()
-            self.current_song = self.queue.pop()
+            self.current_song = self.queue.pop(0)
             # Make youtube_dl download song
             kwargs = {'use_avconv': False}
             self.player = await self.voice.create_ytdl_player(self.current_song.url, ytdl_options={'quiet': True}, after=self.toggle_next, **kwargs)
