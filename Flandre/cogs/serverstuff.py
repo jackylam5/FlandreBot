@@ -58,7 +58,7 @@ class serverstuff:
         '''
 
         with open('Flandre/data/serverstuff/messages.json', 'w') as file:
-            json.dump(self.messages, file)
+            json.dump(self.messages, file, indent=4, sort_keys=True)
         self.bot.log('info', 'messages.json has been saved due to change.')
 
     def checkServerMessages(self, server):
@@ -82,7 +82,7 @@ class serverstuff:
         '''
 
         with open('Flandre/data/serverstuff/custom_commands.json', 'w') as file:
-                    json.dump(self.custom_commands, file)
+                    json.dump(self.custom_commands, file, indent=4, sort_keys=True)
         self.bot.log('info', 'custom_commands.json has been saved due to change.')
 
     def checkServerCommands(self, server):
@@ -283,7 +283,7 @@ class serverstuff:
                 message = self.messages[server.id]['leave']
                 # Replace welcome message variables with data
                 if '%user%' in message:
-                    message = message.replace('%user%', member.mention)
+                    message = message.replace('%user%', member.name)
                 if '%server%' in message:
                     message = message.replace('%server%', server.name)
                 # Wait until user has fully loaded before sending message
