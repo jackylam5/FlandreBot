@@ -164,6 +164,7 @@ class weebtrash:
             await self.bot.send_message(ctx.message.channel, embed=anime_embed)
 
     @airing.command(no_pm=True, pass_context=True)
+    @permissions.checkAdmin()
     async def sub(self, ctx):
         ''' Tells bot to use this channel when an anime comes out
             Using it again will remove the channel
