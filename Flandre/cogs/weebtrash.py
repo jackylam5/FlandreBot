@@ -3,8 +3,7 @@ from discord.ext import commands
 import asyncio
 import aiohttp
 import json
-import datetime
-from operator import itemgetter
+from datetime import datetime, timedelta, date
 from os import mkdir
 from os.path import isdir
 from Flandre import permissions
@@ -25,12 +24,14 @@ class weebtrash:
             self.token_refresher = self.bot.loop.create_task(self.tokenRefresher())
             self.next_airing = None
             self.next_airing_sender = self.bot.loop.create_task(self.nextAiringSender())
+            self.hourly_notifyer = self.bot.loop.create_task(self.hourlyNotifyer())
 
     async def _unload(self):
         ''' Unload function for when it is unloaded
         '''
         self.token_refresher.cancel()
         self.next_airing_sender.cancel()
+        self.hourly_notifyer.cancel()
 
     def loadConfig(self):
         ''' Loads the files for the cogs stored in the cogs data folder
@@ -90,7 +91,7 @@ class weebtrash:
 
         # Set up request
         request_url = 'https://anilist.co/api/browse/anime'
-        params = {'access_token': self.token, 'year': str(datetime.date.today().year),'status': 'Currently Airing', 'airing_data': True}
+        params = {'access_token': self.token, 'year': str(date.today().year),'status': 'Currently Airing', 'airing_data': True}
 
         # Make request
         with aiohttp.ClientSession() as aioclient:
@@ -126,12 +127,54 @@ class weebtrash:
             em.set_author(name='Just Released:')
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
 
+            # Send Embed
             if len(self.subbed_channels) > 0:
                 for channel in self.subbed_channels['channels']:
                     subbed_channel = self.bot.get_channel(channel)
                     await self.bot.send_message(subbed_channel, embed=em)
 
             await asyncio.sleep(1)
+
+    async def hourlyNotifyer(self):
+        ''' Checks every hour (on the hour) and post if anything is airing in that hour 
+        '''
+        # Wait for the next exact hour
+        next_hour = datetime.now() + timedelta(hours=1)
+        time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.now()
+        await asyncio.sleep(round(time_left.total_seconds()))
+
+        while True:
+            # Get animes that are airing within the hour
+            data = await self.getAnilistAPIData()
+            airing_soon = []
+            
+            for anime in data:
+                if anime['airing']['countdown'] <= 3600:
+                    airing_soon.append(anime)
+
+            del data
+
+            if len(airing_soon) > 0:
+                # Create embed
+                em = discord.Embed(type='rich', colour=10057145)
+                em.set_author(name='Airing within the next hour:')
+                for i, anime in enumerate(airing_soon):
+                    m, s = divmod(anime['airing']['countdown'], 60)
+                    h, m = divmod(m, 60)
+                    em.add_field(name='{0}:'.format(i+1), value='{0[title_romaji]} ({0[type]}) [{0[airing][next_episode]}/{0[total_episodes]}] in {1} Hours {2} Minutes'.format(anime, h, m), inline=False)
+
+                # Send Embed
+                if len(self.subbed_channels) > 0:
+                    for channel in self.subbed_channels['channels']:
+                        subbed_channel = self.bot.get_channel(channel)
+                        await self.bot.send_message(subbed_channel, embed=em)
+
+            # Wait for the next exact hour
+            next_hour = datetime.now() + timedelta(hours=1)
+            time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.now()
+            await asyncio.sleep(round(time_left.total_seconds()))
+
+
 
     @commands.group(pass_context=True)
     async def airing(self, ctx) :
