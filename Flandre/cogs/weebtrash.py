@@ -26,6 +26,12 @@ class weebtrash:
             self.next_airing = None
             self.next_airing_sender = self.bot.loop.create_task(self.nextAiringSender())
 
+    async def _unload(self):
+        ''' Unload function for when it is unloaded
+        '''
+        self.token_refresher.cancel()
+        self.next_airing_sender.cancel()
+
     def loadConfig(self):
         ''' Loads the files for the cogs stored in the cogs data folder
         '''
@@ -37,7 +43,7 @@ class weebtrash:
             with open('Flandre/data/weebtrash/config.json', 'w') as file:
                 json.dump({"anilist": {"clientID": "", "clientSecret": ""}}, file, indent=4, sort_keys=True)
             with open('Flandre/data/weebtrash/subbed_channels.json', 'w') as file:
-                json.dump({}, file, indent=4, sort_keys=True)
+                json.dump({'channels': []}, file, indent=4, sort_keys=True)
         else:
             # Check for config file
             try:
@@ -60,7 +66,7 @@ class weebtrash:
                 self.bot.log('error', 'subbed_channels.json could not be loaded. Reason: {0}'.format(e))                
                 # Make the file for user again
                 with open('Flandre/data/weebtrash/subbed_channels.json', 'w') as file:
-                    json.dump({}, file, indent=4, sort_keys=True)
+                    json.dump({'channels': []}, file, indent=4, sort_keys=True)
                 self.bot.log('info', 'Flandre/data/weebtrash/subbed_channels.json has been remade for you')
 
     async def tokenRefresher(self):
@@ -120,29 +126,12 @@ class weebtrash:
             em.set_author(name='Just Released:')
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
 
-            if self.subbed_channel:
-                # Send the message saying it is out
-                for server, channel in self.subbed_channels.items():
+            if len(self.subbed_channels) > 0:
+                for channel in self.subbed_channels['channels']:
                     subbed_channel = self.bot.get_channel(channel)
                     await self.bot.send_message(subbed_channel, embed=em)
 
             await asyncio.sleep(1)
-
-    @commands.command(pass_context=True)
-    async def airing(self, ctx):
-        ''' Gets the current airing anime
-        '''
-                    
-        anime_embed = discord.Embed(type='rich')
-        anime_embed.set_author(name='Next Airing:')
-        anime_embed.set_thumbnail(url=self.next_airing['image_url_lge'])
-        anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as {0[title_english]}'.format(self.next_airing))
-        # Get airing time in h,m,s
-        m, s = divmod(self.next_airing['airing']['countdown'], 60)
-        h, m = divmod(m, 60)
-        anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{0[total_episodes]}**\nAirs in: **{1} hours {2} mins**'.format(self.next_airing, h, m))
-
-        await self.bot.send_message(ctx.message.channel, embed=anime_embed) 
 
     @commands.group(pass_context=True)
     async def airing(self, ctx) :
@@ -152,14 +141,17 @@ class weebtrash:
         '''
         
         if ctx.invoked_subcommand is None:
+            # Get updated airing time
+            air_times = [d['airing']['countdown'] for d in await self.getAnilistAPIData()]
+
             anime_embed = discord.Embed(type='rich', colour=10057145,)
             anime_embed.set_author(name='Next Airing:')
             anime_embed.set_thumbnail(url=self.next_airing['image_url_lge'])
-            anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as {0[title_english]}'.format(self.next_airing))
+            anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as {0[title_english]}'.format(self.next_airing), inline=False)
             # Get airing time in h,m,s
-            m, s = divmod(self.next_airing['airing']['countdown'], 60)
+            m, s = divmod(air_times[0], 60)
             h, m = divmod(m, 60)
-            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{0[total_episodes]}**\nAirs in: **{1} hours {2} mins**'.format(self.next_airing, h, m))
+            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{0[total_episodes]}**\nAirs in: **{1} hours {2} mins**'.format(self.next_airing, h, m), inline=False)
 
             await self.bot.send_message(ctx.message.channel, embed=anime_embed)
 
@@ -171,11 +163,11 @@ class weebtrash:
         '''
 
         removed = False
-        if ctx.message.server.id in self.subbed_channels:
-            self.subbed_channels.pop(ctx.message.server.id)
+        if ctx.message.channel.id in self.subbed_channels['channels']:
+            self.subbed_channels['channels'].remove(ctx.message.channel.id)
             removed = True
         else:
-            self.subbed_channels[ctx.message.server.id] = ctx.message.channel.id
+            self.subbed_channels['channels'].append(ctx.message.channel.id)
         
         try:
             with open('Flandre/data/weebtrash/subbed_channels.json', 'w') as file:

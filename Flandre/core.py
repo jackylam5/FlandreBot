@@ -223,6 +223,8 @@ class Bot(commands.Bot):
             await self.send_message(ctx.message.author, 'This command cannot be used in private messages.')
         elif isinstance(error, commands.MissingRequiredArgument):
             await self.send_message(ctx.message.channel, 'You are missing an argument from this command. Please check what it is and try again')
+        else:
+            print(error)
             
 
     async def on_ready(self):
