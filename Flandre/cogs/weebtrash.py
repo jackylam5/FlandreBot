@@ -199,7 +199,11 @@ class weebtrash:
                 for i, anime in enumerate(airing_soon):
                     m, s = divmod(anime['airing']['countdown'], 60)
                     h, m = divmod(m, 60)
-                    desc += '{0}: [{1[title_romaji]}](https://anilist.co/anime/{1[id]}) ({1[type]}) [{1[airing][next_episode]}/{1[total_episodes]}] in {2} Hours {3} Minutes\n'.format((i+1), anime, h, m)
+                    # Tidy up if unknown eps
+                    total_ep = int(anime['total_episodes'])
+                    if total_ep == 0:
+                        total_ep = '-'
+                    desc += '{0}: [{1[title_romaji]}](https://anilist.co/anime/{1[id]}) ({1[type]}) [{1[airing][next_episode]}/{2}] in {3} Hours {4} Minutes\n'.format((i+1), anime, total_ep ,h, m)
                 
                 # Create embed
                 em = discord.Embed(type='rich', colour=10057145, description=desc)
@@ -249,7 +253,11 @@ class weebtrash:
             # Get airing time in h,m,s
             m, s = divmod(air_times[0], 60)
             h, m = divmod(m, 60)
-            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{0[total_episodes]}**\nAirs in: **{1} hours {2} mins**'.format(self.next_airing, h, m), inline=False)
+            # Tidy up if unknown eps
+            total_ep = Int(anime['total_episodes'])
+            if total_ep == 0:
+                total_ep = '-'
+            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1]}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep,h, m), inline=False)
             # Add crunchyroll link to embed if found
             if cr_link != '':
                 anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [Crunchyroll]({1})'.format(self.next_airing['id'], cr_link))
