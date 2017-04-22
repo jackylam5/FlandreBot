@@ -254,10 +254,10 @@ class weebtrash:
             m, s = divmod(air_times[0], 60)
             h, m = divmod(m, 60)
             # Tidy up if unknown eps
-            total_ep = Int(anime['total_episodes'])
+            total_ep = int(self.next_airing['total_episodes'])
             if total_ep == 0:
                 total_ep = '-'
-            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1]}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep,h, m), inline=False)
+            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep,h, m), inline=False)
             # Add crunchyroll link to embed if found
             if cr_link != '':
                 anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [Crunchyroll]({1})'.format(self.next_airing['id'], cr_link))
