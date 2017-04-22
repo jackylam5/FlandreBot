@@ -29,6 +29,7 @@ class weebtrash:
     async def _unload(self):
         ''' Unload function for when it is unloaded
         '''
+        # Cancel all background tasks
         self.token_refresher.cancel()
         self.next_airing_sender.cancel()
         self.hourly_notifyer.cancel()
@@ -73,23 +74,27 @@ class weebtrash:
     async def tokenRefresher(self):
         ''' Background task to refresh anilist api token every hour
         '''
+        
+        # Set up POST data to get token
         auth_url = 'https://anilist.co/api/auth/access_token'
         auth_data = {'grant_type': "client_credentials", 'client_id': self.config['anilist']['clientID'], 'client_secret': self.config['anilist']['clientSecret']}
         while True:
             
+            # Request token
             with aiohttp.ClientSession() as aioclient:
                 async with aioclient.post(auth_url, data=auth_data) as resp:
                     status_code = resp.status
                     data = await resp.json()
 
+            # Save token and wait untill it expires
             self.token = data['access_token']
             await asyncio.sleep(data['expires_in'])
 
-    async def getAnilistAPIData(self):
+    async def getAiringAnilistAPIData(self):
         ''' Gets AniList API currently airing anime data and sorts it by next release
         '''
 
-        # Set up request
+        # Set up request and params
         request_url = 'https://anilist.co/api/browse/anime'
         params = {'access_token': self.token, 'year': str(date.today().year),'status': 'Currently Airing', 'airing_data': True}
 
@@ -104,28 +109,59 @@ class weebtrash:
             if anime['airing'] is None:
                 data.remove(anime)
 
-        # Sort data so next airing is 1st then the one after and so one
+        # Sort data so next airing is 1st then the one after and so on
         data = sorted(data, key=lambda k: k['airing'].get('countdown'))
+        return data
+
+    async def getAnilistPageInfo(self, id):
+        ''' Gets page info for anime from ID (Mainly used to get crunchyroll link)
+        '''
+
+        # Set up request and params
+        request_url = 'https://anilist.co/api/anime/{0}/page'.format(self.next_airing['id'])
+        params = {'access_token': self.token}
+
+        # Make request
+        with aiohttp.ClientSession() as aioclient:
+            async with aioclient.get(request_url, params=params) as resp:
+                status_code = resp.status
+                data = await resp.json()
+
         return data
 
     async def nextAiringSender(self):
         ''' Gets the next airing episode and posts in subbed channels when it comes out
         '''
+        
         # Wait for token
         await asyncio.sleep(1)
         while True:
             # Grab api data and save the next airing anime
-            data = await self.getAnilistAPIData()
+            data = await self.getAiringAnilistAPIData()
             self.next_airing = data[0]
             del data
 
             # Wait until it airs
             await asyncio.sleep(self.next_airing['airing']['countdown'])
 
+            # Get anime page info for crunchyroll link
+            page_info = await self.getAnilistPageInfo(self.next_airing['id'])
+            cr_link = ''
+
+            for link in page_info['external_links']:
+                if link['site'].lower() == 'crunchyroll':
+                    cr_link = link['url']
+                    break
+
             # Create embed
             em = discord.Embed(type='rich', colour=10057145, description='Episode **{0[airing][next_episode]}** of **{0[title_romaji]} ({0[type]})**'.format(self.next_airing))
             em.set_author(name='Just Released:')
+            # Add crunchyroll link to embed if it was found
+            if cr_link != '':
+                em.description += '\nWatch on [Crunchyroll]({0})'.format(cr_link)
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
+            em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0[id]})'.format(self.next_airing))
+            em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
 
             # Send Embed
             if len(self.subbed_channels) > 0:
@@ -138,30 +174,37 @@ class weebtrash:
     async def hourlyNotifyer(self):
         ''' Checks every hour (on the hour) and post if anything is airing in that hour 
         '''
+        
         # Wait for the next exact hour
         next_hour = datetime.now() + timedelta(hours=1)
         time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.now()
         await asyncio.sleep(round(time_left.total_seconds()))
 
         while True:
-            # Get animes that are airing within the hour
-            data = await self.getAnilistAPIData()
+            # Get animes all airing anime
+            data = await self.getAiringAnilistAPIData()
             airing_soon = []
             
+            # Get all anime airing within the hour seconds <= 3600 but more that a min away
             for anime in data:
-                if anime['airing']['countdown'] <= 3600:
+                if anime['airing']['countdown'] <= 3600 and anime['airing']['countdown'] > 60:
                     airing_soon.append(anime)
 
             del data
 
+            # Check if there are any airing soon
             if len(airing_soon) > 0:
-                # Create embed
-                em = discord.Embed(type='rich', colour=10057145)
-                em.set_author(name='Airing within the next hour:')
+                # Create description
+                desc = ''
                 for i, anime in enumerate(airing_soon):
                     m, s = divmod(anime['airing']['countdown'], 60)
                     h, m = divmod(m, 60)
-                    em.add_field(name='{0}:'.format(i+1), value='{0[title_romaji]} ({0[type]}) [{0[airing][next_episode]}/{0[total_episodes]}] in {1} Hours {2} Minutes'.format(anime, h, m), inline=False)
+                    desc += '{0}: [{1[title_romaji]}](https://anilist.co/anime/{1[id]}) ({1[type]}) [{1[airing][next_episode]}/{1[total_episodes]}] in {2} Hours {3} Minutes\n'.format((i+1), anime, h, m)
+                
+                # Create embed
+                em = discord.Embed(type='rich', colour=10057145, description=desc)
+                em.set_author(name='Airing within the next hour:')
+                em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
 
                 # Send Embed
                 if len(self.subbed_channels) > 0:
@@ -174,10 +217,8 @@ class weebtrash:
             time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.now()
             await asyncio.sleep(round(time_left.total_seconds()))
 
-
-
     @commands.group(pass_context=True)
-    async def airing(self, ctx) :
+    async def anime(self, ctx) :
         ''' Airing anime commands
             airing sub - will make the bot send message when something airs
             No args will make the bot show the next airing anime
@@ -185,20 +226,39 @@ class weebtrash:
         
         if ctx.invoked_subcommand is None:
             # Get updated airing time
-            air_times = [d['airing']['countdown'] for d in await self.getAnilistAPIData()]
+            air_times = [d['airing']['countdown'] for d in await self.getAiringAnilistAPIData()]
+
+            # Get crunchyroll link 
+            page_info = await self.getAnilistPageInfo(self.next_airing['id'])
+            cr_link = ''
+
+            for link in page_info['external_links']:
+                if link['site'].lower() == 'crunchyroll':
+                    cr_link = link['url']
+                    break
 
             anime_embed = discord.Embed(type='rich', colour=10057145,)
-            anime_embed.set_author(name='Next Airing:')
+            anime_embed.set_author(name='Airing next:')
             anime_embed.set_thumbnail(url=self.next_airing['image_url_lge'])
-            anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as {0[title_english]}'.format(self.next_airing), inline=False)
+            # Check if english title is different from romaji title
+            if self.next_airing['title_english'] != self.next_airing['title_romaji']:
+                anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as **{0[title_english]}**'.format(self.next_airing), inline=False)
+            else:
+                anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})'.format(self.next_airing), inline=False)
+            anime_embed.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
             # Get airing time in h,m,s
             m, s = divmod(air_times[0], 60)
             h, m = divmod(m, 60)
             anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{0[total_episodes]}**\nAirs in: **{1} hours {2} mins**'.format(self.next_airing, h, m), inline=False)
+            # Add crunchyroll link to embed if found
+            if cr_link != '':
+                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [Crunchyroll]({1})'.format(self.next_airing['id'], cr_link))
+            else:
+                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0})'.format(self.next_airing['id']))
 
             await self.bot.send_message(ctx.message.channel, embed=anime_embed)
 
-    @airing.command(no_pm=True, pass_context=True)
+    @anime.command(no_pm=True, pass_context=True)
     @permissions.checkAdmin()
     async def sub(self, ctx):
         ''' Tells bot to use this channel when an anime comes out
