@@ -3,6 +3,7 @@ from discord.ext import commands
 import asyncio
 import aiohttp
 import json
+import xml.etree.ElementTree as et
 from datetime import datetime, timedelta, date
 from os import mkdir
 from os.path import isdir
@@ -30,9 +31,10 @@ class weebtrash:
         ''' Unload function for when it is unloaded
         '''
         # Cancel all background tasks
-        self.token_refresher.cancel()
-        self.next_airing_sender.cancel()
-        self.hourly_notifyer.cancel()
+        if self.loadConfig:
+            self.token_refresher.cancel()
+            self.next_airing_sender.cancel()
+            self.hourly_notifyer.cancel()
 
     def loadConfig(self):
         ''' Loads the files for the cogs stored in the cogs data folder
@@ -43,7 +45,7 @@ class weebtrash:
             self.bot.log('warn', 'Cogs data folder not found, it and all files have been made')
             mkdir('Flandre/data/weebtrash')
             with open('Flandre/data/weebtrash/config.json', 'w') as file:
-                json.dump({"anilist": {"clientID": "", "clientSecret": ""}}, file, indent=4, sort_keys=True)
+                json.dump({"anilist": {"clientID": "", "clientSecret": ""}, "mal": {"username": "", "password": ""}}, file, indent=4, sort_keys=True)
             with open('Flandre/data/weebtrash/subbed_channels.json', 'w') as file:
                 json.dump({'channels': []}, file, indent=4, sort_keys=True)
         else:
@@ -57,7 +59,7 @@ class weebtrash:
                 self.bot.log('error', 'config.json could not be loaded. Reason: {0}'.format(e))                
                 # Make the file for user again
                 with open('Flandre/data/weebtrash/config.json', 'w') as file:
-                    json.dump({"anilist": {"clientID": "", "clientSecret": ""}}, file, indent=4, sort_keys=True)
+                    json.dump({"anilist": {"clientID": "", "clientSecret": ""}, "mal": {"username": "", "password": ""}}, file, indent=4, sort_keys=True)
                 self.bot.log('info', 'Flandre/data/weebtrash/config.json has been remade for you')
             # Check for subbed channels file
             try:
@@ -129,6 +131,21 @@ class weebtrash:
 
         return data
 
+    async def getMALAnimeInfo(self, anime):
+        ''' Get MAL anime info from name
+        '''
+        # Remove spaces for web request
+        anime = anime.replace(' ', '_')
+
+        # Request Information
+        with aiohttp.ClientSession() as aioclient:
+            async with aioclient.get('https://myanimelist.net/api/anime/search.xml?q={0}'.format(anime), auth=aiohttp.BasicAuth(self.config['mal']['username'], self.config['mal']['password'])) as resp:
+                data = await resp.text()
+                data = et.fromstring(data)
+
+        return [i for i in [dict((info.tag, info.text) for info in entrys) for entrys in data]]
+
+
     async def nextAiringSender(self):
         ''' Gets the next airing episode and posts in subbed channels when it comes out
         '''
@@ -148,6 +165,9 @@ class weebtrash:
             page_info = await self.getAnilistPageInfo(self.next_airing['id'])
             cr_link = ''
 
+            # Get MAL link
+            mal_data = await self.getMALAnimeInfo(self.next_airing['title_romaji'])
+
             for link in page_info['external_links']:
                 if link['site'].lower() == 'crunchyroll':
                     cr_link = link['url']
@@ -160,7 +180,7 @@ class weebtrash:
             if cr_link != '':
                 em.description += '\nWatch on [Crunchyroll]({0})'.format(cr_link)
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
-            em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0[id]})'.format(self.next_airing))
+            em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0[id]}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
             em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
 
             # Send Embed
@@ -232,6 +252,9 @@ class weebtrash:
             # Get updated airing time
             air_times = [d['airing']['countdown'] for d in await self.getAiringAnilistAPIData()]
 
+            # Get MAL link
+            mal_data = await self.getMALAnimeInfo(self.next_airing['title_romaji'])
+
             # Get crunchyroll link 
             page_info = await self.getAnilistPageInfo(self.next_airing['id'])
             cr_link = ''
@@ -260,9 +283,9 @@ class weebtrash:
             anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep,h, m), inline=False)
             # Add crunchyroll link to embed if found
             if cr_link != '':
-                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [Crunchyroll]({1})'.format(self.next_airing['id'], cr_link))
+                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1}) [Crunchyroll]({2})'.format(self.next_airing['id'], mal_data[0]['id'], cr_link))
             else:
-                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0})'.format(self.next_airing['id']))
+                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
 
             await self.bot.send_message(ctx.message.channel, embed=anime_embed)
 
