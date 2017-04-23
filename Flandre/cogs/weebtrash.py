@@ -18,6 +18,7 @@ class weebtrash:
         self.bot = bot
         self.config = {}
         self.subbed_channels = {}
+        self.notifications = {}
         self.loaded_config = False
         self.loadConfig()
         if self.loaded_config:
@@ -26,6 +27,7 @@ class weebtrash:
             self.next_airing = None
             self.next_airing_sender = self.bot.loop.create_task(self.nextAiringSender())
             self.hourly_notifyer = self.bot.loop.create_task(self.hourlyNotifyer())
+            self.airing_checker = self.bot.loop.create_task(self.airingNotificationChecker())
 
     async def _unload(self):
         ''' Unload function for when it is unloaded
@@ -35,6 +37,15 @@ class weebtrash:
             self.token_refresher.cancel()
             self.next_airing_sender.cancel()
             self.hourly_notifyer.cancel()
+            self.airing_checker.cancel()
+
+    def send_cmd_help(self, ctx):
+        if ctx.invoked_subcommand:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
+            return pages
+        else:
+            pages = self.bot.formatter.format_help_for(ctx, ctx.command)
+            return pages
 
     def loadConfig(self):
         ''' Loads the files for the cogs stored in the cogs data folder
@@ -48,6 +59,8 @@ class weebtrash:
                 json.dump({"anilist": {"clientID": "", "clientSecret": ""}, "mal": {"username": "", "password": ""}}, file, indent=4, sort_keys=True)
             with open('Flandre/data/weebtrash/subbed_channels.json', 'w') as file:
                 json.dump({'channels': []}, file, indent=4, sort_keys=True)
+            with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
+                json.dump({}, file, indent=4, sort_keys=True)
         else:
             # Check for config file
             try:
@@ -72,6 +85,17 @@ class weebtrash:
                 with open('Flandre/data/weebtrash/subbed_channels.json', 'w') as file:
                     json.dump({'channels': []}, file, indent=4, sort_keys=True)
                 self.bot.log('info', 'Flandre/data/weebtrash/subbed_channels.json has been remade for you')
+            # Check for notifications file
+            try:
+                with open('Flandre/data/weebtrash/notifications.json', 'r') as file:
+                    self.notifications = json.load(file)
+            except (json.decoder.JSONDecodeError, IOError) as e:
+                self.notifications = {}
+                self.bot.log('error', 'notifications.json could not be loaded. Reason: {0}'.format(e))                
+                # Make the file for user again
+                with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
+                    json.dump({}, file, indent=4, sort_keys=True)
+                self.bot.log('info', 'Flandre/data/weebtrash/notifications.json has been remade for you')
 
     async def tokenRefresher(self):
         ''' Background task to refresh anilist api token every hour
@@ -145,7 +169,6 @@ class weebtrash:
 
         return [i for i in [dict((info.tag, info.text) for info in entrys) for entrys in data]]
 
-
     async def nextAiringSender(self):
         ''' Gets the next airing episode and posts in subbed channels when it comes out
         '''
@@ -181,6 +204,7 @@ class weebtrash:
                 em.description += '\nWatch on [Crunchyroll]({0})'.format(cr_link)
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
             em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
+            em.add_field(name='DM Notification:', value='Type **@{0} anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, self.next_airing['id']))
             em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
 
             # Send Embed
@@ -188,6 +212,15 @@ class weebtrash:
                 for channel in self.subbed_channels['channels']:
                     subbed_channel = self.bot.get_channel(channel)
                     await self.bot.send_message(subbed_channel, embed=em)
+
+            if self.next_airing['id'] in self.notifications:
+                for user_id in self.notifications[self.next_airing['id']]:
+                    try:
+                        user = discord.utils.get(self.bot.get_all_members(), id=user_id)
+                        if user is not None:
+                            await self.bot.send_message(user, embed=em)
+                    except:
+                        continue
 
             await asyncio.sleep(1)
 
@@ -241,53 +274,49 @@ class weebtrash:
             time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.now()
             await asyncio.sleep(round(time_left.total_seconds()))
 
+    async def airingNotificationChecker(self):
+        ''' Checks if animes in DM notifications is still airing
+            if not it is removed from the file. Checks daily
+        '''
+        # Wait for the next day
+        next_day = datetime.now() + timedelta(days=1)
+        time_left = next_day.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.now()
+        await asyncio.sleep(round(time_left.total_seconds()))
+
+        while True:
+            # Get animes all airing anime ids
+            airing_ids = [str(d['id']) for d in await self.getAiringAnilistAPIData()]
+
+            for notif_id in self.notifications.copy():
+                if notif_id not in airing_ids:
+                    self.notifications.pop(str(notif_id))
+
+            # Save notifications.json
+            try:
+                with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
+                    json.dump(self.notifications, file, indent=4, sort_keys=True)
+            except:
+                self.bot.log('critical', 'Flandre/data/weebtrash/notifications.json could not be saved. Please check it')
+            else:
+                self.bot.log('info', 'Flandre/data/weebtrash/notifications.json has been saved.')
+
+            # Wait for the next day
+            next_day = datetime.now() + timedelta(days=1)
+            time_left = next_day.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.now()
+            await asyncio.sleep(round(time_left.total_seconds()))
+
+
     @commands.group(pass_context=True)
     async def anime(self, ctx) :
-        ''' Airing anime commands
-            airing sub - will make the bot send message when something airs
-            No args will make the bot show the next airing anime
+        ''' Anime commands 
+            Uses AniList and MAL
         '''
         
         if ctx.invoked_subcommand is None:
-            # Get updated airing time
-            air_times = [d['airing']['countdown'] for d in await self.getAiringAnilistAPIData()]
-
-            # Get MAL link
-            mal_data = await self.getMALAnimeInfo(self.next_airing['title_romaji'])
-
-            # Get crunchyroll link 
-            page_info = await self.getAnilistPageInfo(self.next_airing['id'])
-            cr_link = ''
-
-            for link in page_info['external_links']:
-                if link['site'].lower() == 'crunchyroll':
-                    cr_link = link['url']
-                    break
-
-            anime_embed = discord.Embed(type='rich', colour=10057145,)
-            anime_embed.set_author(name='Airing next:')
-            anime_embed.set_thumbnail(url=self.next_airing['image_url_lge'])
-            # Check if english title is different from romaji title
-            if self.next_airing['title_english'] != self.next_airing['title_romaji']:
-                anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as **{0[title_english]}**'.format(self.next_airing), inline=False)
-            else:
-                anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})'.format(self.next_airing), inline=False)
-            anime_embed.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
-            # Get airing time in h,m,s
-            m, s = divmod(air_times[0], 60)
-            h, m = divmod(m, 60)
-            # Tidy up if unknown eps
-            total_ep = int(self.next_airing['total_episodes'])
-            if total_ep == 0:
-                total_ep = '-'
-            anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep,h, m), inline=False)
-            # Add crunchyroll link to embed if found
-            if cr_link != '':
-                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1}) [Crunchyroll]({2})'.format(self.next_airing['id'], mal_data[0]['id'], cr_link))
-            else:
-                anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
-
-            await self.bot.send_message(ctx.message.channel, embed=anime_embed)
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
+            
 
     @anime.command(no_pm=True, pass_context=True)
     @permissions.checkAdmin()
@@ -319,6 +348,146 @@ class weebtrash:
             else:
                 await self.bot.say('New releases will be sent to this channel.')
                 self.bot.log('info', 'Flandre/data/weebtrash/subbed_channels.json has been saved. Reason: {0.name} ({0.id}) has been made a subbed channel'.format(ctx.message.channel))
+
+    @anime.command(name='next', pass_context=True)
+    async def anime_next(self, ctx):
+        ''' Displays info on the next airing anime
+        '''
+
+        # Get updated airing time
+        air_times = [d['airing']['countdown'] for d in await self.getAiringAnilistAPIData()]
+
+        # Get MAL link
+        mal_data = await self.getMALAnimeInfo(self.next_airing['title_romaji'])
+
+        # Get crunchyroll link 
+        page_info = await self.getAnilistPageInfo(self.next_airing['id'])
+        cr_link = ''
+
+        for link in page_info['external_links']:
+            if link['site'].lower() == 'crunchyroll':
+                cr_link = link['url']
+                break
+
+        anime_embed = discord.Embed(type='rich', colour=10057145)
+        anime_embed.set_author(name='Airing next:')
+        anime_embed.set_thumbnail(url=self.next_airing['image_url_lge'])
+        # Check if english title is different from romaji title
+        if self.next_airing['title_english'] != self.next_airing['title_romaji']:
+            anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})\nKnown as **{0[title_english]}**'.format(self.next_airing), inline=False)
+        else:
+            anime_embed.add_field(name='Title', value='{0[title_romaji]} ({0[type]})'.format(self.next_airing), inline=False)
+        anime_embed.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
+        # Get airing time in h,m,s
+        m, s = divmod(air_times[0], 60)
+        h, m = divmod(m, 60)
+        # Tidy up if unknown eps
+        total_ep = int(self.next_airing['total_episodes'])
+        if total_ep == 0:
+            total_ep = '-'
+        anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep, h, m), inline=False)
+        # Add crunchyroll link to embed if found
+        if cr_link != '':
+            anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1}) [Crunchyroll]({2})'.format(self.next_airing['id'], mal_data[0]['id'], cr_link))
+        else:
+            anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
+        anime_embed.add_field(name='DM Notification:', value='Type **@{0} anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, self.next_airing['id']))
+
+        await self.bot.send_message(ctx.message.channel, embed=anime_embed)
+
+    @anime.command(pass_context=True)
+    async def notify(self, ctx, anime_id : str):
+        ''' Gets the bot to DM you the anime from id when it comes out
+        '''
+
+        # Get all airing anime ID's and names in a dict
+        airing_ids =  {str(k['id']): k['title_romaji'] for k in await self.getAiringAnilistAPIData()}
+
+        # Check if the anime they asked for is airing
+        already_notify = False
+        if anime_id in airing_ids:
+            if str(anime_id) in self.notifications:
+                if ctx.message.author.id in self.notifications[str(anime_id)]:
+                    already_notify = True
+                else:
+                    self.notifications[str(anime_id)].append(ctx.message.author.id)
+            else:
+                self.notifications[str(anime_id)] = []
+                self.notifications[str(anime_id)].append(ctx.message.author.id)
+
+            if already_notify:
+                await self.bot.say("{0}, I'm already notifying you when {1} comes out!".format(ctx.message.author.mention, airing_ids[anime_id]))
+            else:
+                await self.bot.say("Okay {0}, I'll notify you when {1} comes out!".format(ctx.message.author.mention, airing_ids[anime_id]))
+
+            # Save notifications.json
+            try:
+                with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
+                    json.dump(self.notifications, file, indent=4, sort_keys=True)
+            except Exception as e:
+                self.bot.log('critical', 'Flandre/data/weebtrash/notifications.json could not be saved. Please check it Reason: {0}'.format(e))
+            else:
+                self.bot.log('info', 'Flandre/data/weebtrash/notifications.json has been saved.')
+        else:
+            await self.bot.say("{0}, There isn't an anime with that ID airing, Did you copy the ID right?".format(ctx.message.author.mention))
+
+    @anime.command(pass_context=True)
+    async def stop(self, ctx, anime_id : str):
+        ''' Gets the bot to stop DMing you the anime from id when it comes out
+        '''
+
+        # Get all airing anime ID's and names in a dict
+        airing_ids =  {str(k['id']): k['title_romaji'] for k in await self.getAiringAnilistAPIData()}
+
+        # Check if the anime they asked for is airing
+        already_notify = True
+        if anime_id in airing_ids:
+            if str(anime_id) in self.notifications:
+                if ctx.message.author.id in self.notifications[str(anime_id)]:
+                    self.notifications[str(anime_id)].remove(ctx.message.author.id)
+                    if len(self.notifications[str(anime_id)]) == 0:
+                        self.notifications.pop(str(anime_id))
+                else:
+                    already_notify = False
+            else:
+                already_notify = False           
+            
+            if already_notify:
+                await self.bot.say("Okay {0}, I'll stop notifying you when {1} comes out!".format(ctx.message.author.mention, airing_ids[anime_id]))
+            else:
+                await self.bot.say("{0}, I'll wasn't notifying you when {1} came out!".format(ctx.message.author.mention, airing_ids[anime_id]))
+
+            # Save notifications.json
+            try:
+                with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
+                    json.dump(self.notifications, file, indent=4, sort_keys=True)
+            except Exception as e:
+                self.bot.log('critical', 'Flandre/data/weebtrash/notifications.json could not be saved. Please check it Reason: {0}'.format(e))
+            else:
+                self.bot.log('info', 'Flandre/data/weebtrash/notifications.json has been saved.')
+        else:
+            await self.bot.say("{0}, There isn't an anime with that ID airing, Did you copy the ID right?".format(ctx.message.author.mention))
+
+    @anime.command(pass_context=True)
+    async def airing(self, ctx):
+        ''' Shows all airing anime with a known release
+        '''
+
+        data = await self.getAiringAnilistAPIData()
+
+        desc = ''
+        for anime in data:
+            # Tidy up if unknown eps
+            total_ep = int(self.next_airing['total_episodes'])
+            if total_ep == 0:
+                total_ep = '-'
+            desc += '[ID: {0[id]}] {0[title_romaji]} [{0[airing][next_episode]}/{1}]\n'.format(anime, total_ep) 
+
+        em = discord.Embed(type='rich', colour=10057145, description=desc)
+        em.set_author(name='Currently Airing:')
+        em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
+
+        await self.bot.send_message(ctx.message.channel, embed=em)
 
 def setup(bot):
     n = weebtrash(bot)
