@@ -205,9 +205,9 @@ class weebtrash:
             data = await self.getAiringAnilistAPIData()
             airing_soon = []
             
-            # Get all anime airing within the hour seconds <= 3600 but more that a min away
+            # Get all anime airing within the hour seconds <= 3660 but more that a min away
             for anime in data:
-                if anime['airing']['countdown'] <= 3600 and anime['airing']['countdown'] > 60:
+                if anime['airing']['countdown'] <= 3660 and anime['airing']['countdown'] > 60:
                     airing_soon.append(anime)
 
             del data
