@@ -165,13 +165,13 @@ class weebtrash:
             page_info = await self.getAnilistPageInfo(self.next_airing['id'])
             cr_link = ''
 
-            # Get MAL link
-            mal_data = await self.getMALAnimeInfo(self.next_airing['title_romaji'])
-
             for link in page_info['external_links']:
                 if link['site'].lower() == 'crunchyroll':
                     cr_link = link['url']
                     break
+
+            # Get MAL link
+            mal_data = await self.getMALAnimeInfo(self.next_airing['title_romaji'])
 
             # Create embed
             em = discord.Embed(type='rich', colour=10057145, description='Episode **{0[airing][next_episode]}** of **{0[title_romaji]} ({0[type]})**'.format(self.next_airing))
@@ -180,7 +180,7 @@ class weebtrash:
             if cr_link != '':
                 em.description += '\nWatch on [Crunchyroll]({0})'.format(cr_link)
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
-            em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0[id]}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
+            em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
             em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
 
             # Send Embed
