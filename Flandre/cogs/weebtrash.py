@@ -284,13 +284,17 @@ class weebtrash:
         await asyncio.sleep(round(time_left.total_seconds()))
 
         while True:
+            counter = 0
             # Get animes all airing anime ids
             airing_ids = [str(d['id']) for d in await self.getAiringAnilistAPIData()]
 
             for notif_id in self.notifications.copy():
                 if notif_id not in airing_ids:
                     self.notifications.pop(str(notif_id))
+                    counter +=1
 
+            self.bot.log('info', 'Daily anime notification checker ran. Removed: {0}'.format(counter))
+            
             # Save notifications.json
             try:
                 with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
