@@ -161,13 +161,16 @@ class weebtrash:
         # Remove spaces for web request
         anime = anime.replace(' ', '_')
 
-        # Request Information
-        with aiohttp.ClientSession() as aioclient:
-            async with aioclient.get('https://myanimelist.net/api/anime/search.xml?q={0}'.format(anime), auth=aiohttp.BasicAuth(self.config['mal']['username'], self.config['mal']['password'])) as resp:
-                data = await resp.text()
-                data = et.fromstring(data)
+        try:
+            # Request Information
+            with aiohttp.ClientSession() as aioclient:
+                async with aioclient.get('https://myanimelist.net/api/anime/search.xml?q={0}'.format(anime), auth=aiohttp.BasicAuth(self.config['mal']['username'], self.config['mal']['password'])) as resp:
+                    data = await resp.text()
+                    data = et.fromstring(data)
 
-        return [i for i in [dict((info.tag, info.text) for info in entrys) for entrys in data]]
+            return [i for i in [dict((info.tag, info.text) for info in entrys) for entrys in data]]
+        except:
+            return []
 
     async def nextAiringSender(self):
         ''' Gets the next airing episode and posts in subbed channels when it comes out
@@ -203,7 +206,11 @@ class weebtrash:
             if cr_link != '':
                 em.description += '\nWatch on [Crunchyroll]({0})'.format(cr_link)
             em.set_thumbnail(url=self.next_airing['image_url_lge'])
-            em.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
+            # Add links to embed
+            links = '[Anilist](https://anilist.co/anime/{0})'.format(self.next_airing['id'])
+            if len(mal_data) > 0:
+                links += ' [MAL](https://myanimelist.net/anime/{0})'.format(mal_data[0]['id'])
+            em.add_field(name='Links:', value=links)
             em.add_field(name='DM Notification:', value='Type **@{0} anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, self.next_airing['id']))
             em.set_footer(text='Info from Anilist | {0}'.format(datetime.now().strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
 
@@ -213,8 +220,8 @@ class weebtrash:
                     subbed_channel = self.bot.get_channel(channel)
                     await self.bot.send_message(subbed_channel, embed=em)
 
-            if self.next_airing['id'] in self.notifications:
-                for user_id in self.notifications[self.next_airing['id']]:
+            if str(self.next_airing['id']) in self.notifications:
+                for user_id in self.notifications[str(self.next_airing['id'])]:
                     try:
                         user = discord.utils.get(self.bot.get_all_members(), id=user_id)
                         if user is not None:
@@ -390,11 +397,13 @@ class weebtrash:
         if total_ep == 0:
             total_ep = '-'
         anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2} hours {3} mins**'.format(self.next_airing, total_ep, h, m), inline=False)
-        # Add crunchyroll link to embed if found
+        # Add links to embed
+        links = '[Anilist](https://anilist.co/anime/{0})'.format(self.next_airing['id'])
+        if len(mal_data) > 0:
+            links += ' [MAL](https://myanimelist.net/anime/{0})'.format(mal_data[0]['id'])
         if cr_link != '':
-            anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1}) [Crunchyroll]({2})'.format(self.next_airing['id'], mal_data[0]['id'], cr_link))
-        else:
-            anime_embed.add_field(name='Links:', value='[Anilist](https://anilist.co/anime/{0}) [MAL](https://myanimelist.net/anime/{1})'.format(self.next_airing['id'], mal_data[0]['id']))
+            links += ' [Crunchyroll]({0})'.format(cr_link)
+        anime_embed.add_field(name='Links:', value=links)
         anime_embed.add_field(name='DM Notification:', value='Type **@{0} anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, self.next_airing['id']))
 
         await self.bot.send_message(ctx.message.channel, embed=anime_embed)
