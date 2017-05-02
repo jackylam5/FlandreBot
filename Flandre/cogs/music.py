@@ -466,11 +466,15 @@ class MusicPlayer:
             fm, fs = divmod(self.player.duration, 60)
             fh, fm = divmod(fm, 60)
 
-            desc = '[{0.title}]({0.url}) [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]'.format(self.player, h, m, s, fh, fm, fs)            
+            if fh != 0:
+                desc = '[{0.title}]({0.url}) [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]'.format(self.player, h, m, s, fh, fm, fs) 
+            else:
+                desc = '[{0.title}]({0.url}) [{1:02d}:{2:02d}/{3:02d}:{4:02d}]'.format(self.player, m, s, fm, fs)
+
             
             # Check for more songs
             if len(self.queue) > 1:
-                desc = '\nUp next:\n'
+                desc += '\nUp next:\n'
                 if len(self.queue) < 5:
                     for i in range(0, len(self.queue)):
                         desc += '{0}:  [{1.title}]({1.url}) - Requested by **{1.requester.display_name}**\n'.format((i+1), self.queue[i])
