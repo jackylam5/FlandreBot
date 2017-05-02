@@ -252,9 +252,9 @@ class MusicPlayer:
                 if search:
                     ytdl = youtube_dl.YoutubeDL({'default_search': 'auto' , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 elif sc:
-                    ytdl = youtube_dl.YoutubeDL({'playlistend': 10, 'playlistrandom': True, 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                    ytdl = youtube_dl.YoutubeDL({'playlistend': 20, 'playlistrandom': True, 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 else:
-                    ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 9) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
+                    ytdl = youtube_dl.YoutubeDL({'playliststart': start_pos, 'playlistend': (start_pos + 19) , 'simulate': True, 'skip_download': True, 'ignoreerrors': True, 'quiet': True})
                 # Send info message
                 msg = 'Getting info from link. This might take a while please wait'
                 temp_mesg = await self.bot.send_message(message.channel, msg)
