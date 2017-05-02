@@ -298,14 +298,14 @@ class MusicPlayer:
                             if queued > 0:
                                 # Tell the user how many songs have been queued                 
                                 if sc:
-                                    msg = 'Queued: **{0}** random songs'
+                                    msg = 'Queued: **{0}** random songs [Videos in queue: {1}]'
                                 else:
-                                    msg = 'Queued: **{0}** songs'
+                                    msg = 'Queued: **{0}** songs [Videos in queue: {1}]'
                             else:
                                 msg = 'No songs were added'
                             if self.time_left_paused is not None:
                                 msg += ' Current song is *PAUSED*'
-                            await self.bot.edit_message(temp_mesg, msg.format(str(queued)))
+                            await self.bot.edit_message(temp_mesg, msg.format(str(queued), len(self.queue)))
                     else:
                         # Single song
                         # Get song url, title and requester
@@ -317,10 +317,10 @@ class MusicPlayer:
                             # Add song to queue
                             self.queue.append(Song(url, title, thumbnail, user))
                             # Tell the user the song has been queued
-                            msg = ':notes: Queued: **{0}**'
+                            msg = ':notes: Queued: **{0}** [Videos in queue: {1}]'
                             if self.time_left_paused is not None:
                                 msg += ' Current song is *PAUSED*'
-                            await self.bot.edit_message(temp_mesg, msg.format(title))
+                            await self.bot.edit_message(temp_mesg, msg.format(title, len(self.queue)))
                         else:
                             msg = 'Could not add that link to queue'
                             if self.time_left_paused is not None:
@@ -458,26 +458,33 @@ class MusicPlayer:
                 m, s = divmod(time_left, 60)
                 h, m = divmod(m, 60)
                 # Based on how many hours there is in the song create embed
+                desc = ''
                 if h != 0:
                     qe = discord.Embed(type='rich', colour=discord.Colour(65535))
-                    qe.set_author(name='Queue')
-                    qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s), inline=False)
+                    qe.set_author(name='Up Next:')
+                    desc += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s)
                 else:
                     qe = discord.Embed(type='rich', colour=discord.Colour(65535))
-                    qe.set_author(name='Queue:')
-                    qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}s'.format(self.queue, m, s), inline=False)
+                    qe.set_author(name='Up Next:')
+                    desc += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s)
             else:
                 qe = discord.Embed(type='rich', colour=discord.Colour(65535))
                 qe.set_author(name='Queue:')
-                qe.add_field(name='Up Next:', value='**{0[0].title}** - Requested by **{0[0].requester.display_name}**. Current song is *PAUSED*'.format(self.queue), inline=False)
+                desc += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Current song is *PAUSED*'.format(self.queue)
+            
             # Check for more songs
             if len(self.queue) > 1:
+                desc = '\nAfter:\n'
                 if len(self.queue) < 6:
                     for i in range(1, len(self.queue)):
-                        qe.add_field(name='{0}:'.format(str((i))), value='{0} - Requested by {1}'.format(self.queue[i].title, self.queue[i].requester.display_name, inline=False))
+                        desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
                 else:
                     for i in range(1, 5):
-                        qe.add_field(name='{0}:'.format(str((i))), value='{0} - Requested by {1}'.format(self.queue[i].title, self.queue[i].requester.display_name, inline=False))
+                        desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
+                    # Display number of other songs
+                    desc += 'And {0} more'.format(len(self.queue[6:]))
+
+            qu.description = desc
             # Send embed
             await self.bot.send_message(message.channel, embed=qe)
 
