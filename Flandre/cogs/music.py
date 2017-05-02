@@ -70,8 +70,8 @@ class MusicPlayer:
             m, s = divmod(int(self.player.duration), 60)
             h, m = divmod(m, 60)
             # Create playing embed
-            np = discord.Embed(type='rich', colour=discord.Colour(65280), description='**{0}** ({1:02d}:{2:02d}:{3:02d}s)'.format(self.player.title, h, m, s))
-            np.set_author(name='Now Playing:', url=self.player.url)
+            np = discord.Embed(type='rich', colour=discord.Colour(65280), description='[{0.title}]({0.url}) ({1:02d}:{2:02d}:{3:02d}s)'.format(self.player, h, m, s))
+            np.set_author(name='Now Playing:')
             np.set_footer(text='Requested by {0}'.format(self.current_song.requester.display_name))
             np.set_thumbnail(url=self.current_song.thumbnail)
             # Send the now playing embed and start player
