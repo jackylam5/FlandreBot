@@ -458,33 +458,31 @@ class MusicPlayer:
                 m, s = divmod(time_left, 60)
                 h, m = divmod(m, 60)
                 # Based on how many hours there is in the song create embed
-                desc = ''
                 if h != 0:
-                    qe = discord.Embed(type='rich', colour=discord.Colour(65535))
+                    qe = discord.Embed(type='rich', colour=discord.Colour(65535), description='')
                     qe.set_author(name='Up Next:')
-                    desc += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s)
+                    qe.description += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s)
                 else:
-                    qe = discord.Embed(type='rich', colour=discord.Colour(65535))
+                    qe = discord.Embed(type='rich', colour=discord.Colour(65535), description='')
                     qe.set_author(name='Up Next:')
-                    desc += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s)
+                    qe.description += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Plays in {1:02d}:{2:02d}:{3:02d}s'.format(self.queue, h, m, s)
             else:
-                qe = discord.Embed(type='rich', colour=discord.Colour(65535))
+                qe = discord.Embed(type='rich', colour=discord.Colour(65535), description='')
                 qe.set_author(name='Queue:')
-                desc += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Current song is *PAUSED*'.format(self.queue)
+                qe.description += '[{0[0].title}]({0[0].url}) - Requested by **{0[0].requester.display_name}**. Current song is *PAUSED*'.format(self.queue)
             
             # Check for more songs
             if len(self.queue) > 1:
-                desc = '\nAfter:\n'
+                qe.description = '\nAfter:\n'
                 if len(self.queue) < 6:
                     for i in range(1, len(self.queue)):
-                        desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
+                        qe.description += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
                 else:
                     for i in range(1, 5):
-                        desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
+                        qe.description += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
                     # Display number of other songs
-                    desc += 'And {0} more'.format(len(self.queue[6:]))
+                    qe.description += 'And {0} more'.format(len(self.queue[6:]))
 
-            qe.description = desc
             # Send embed
             await self.bot.send_message(message.channel, embed=qe)
 
