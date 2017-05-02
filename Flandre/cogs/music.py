@@ -470,7 +470,6 @@ class MusicPlayer:
                 desc = '[{0.title}]({0.url}) [{1:02d}:{2:02d}:{3:02d}/{4:02d}:{5:02d}:{6:02d}]'.format(self.player, h, m, s, fh, fm, fs) 
             else:
                 desc = '[{0.title}]({0.url}) [{1:02d}:{2:02d}/{3:02d}:{4:02d}]'.format(self.player, m, s, fm, fs)
-
             
             # Check for more songs
             if len(self.queue) > 1:
@@ -485,7 +484,7 @@ class MusicPlayer:
                     desc += 'And **{0}** more'.format(len(self.queue[5:]))
 
             # Send embed
-            qe = discord.Embed(type='rich', colour=discord.Colour(65535), description=desc)
+            qe = discord.Embed(type='rich', colour=discord.Colour(5577355), description=desc)
             qe.set_author(name='Currently Playing:')
             await self.bot.send_message(message.channel, embed=qe)
 
