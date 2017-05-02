@@ -484,7 +484,7 @@ class MusicPlayer:
                     # Display number of other songs
                     desc += 'And {0} more'.format(len(self.queue[6:]))
 
-            qu.description = desc
+            qe.description = desc
             # Send embed
             await self.bot.send_message(message.channel, embed=qe)
 
