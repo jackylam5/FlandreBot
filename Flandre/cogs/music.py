@@ -471,13 +471,12 @@ class MusicPlayer:
                 desc = '\nAfter:\n'
                 if len(self.queue) < 6:
                     for i in range(1, len(self.queue)):
-                        desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
+                        desc += '{0}: [{1.title}]({1.url}) - Requested by **{1.requester.display_name}**\n'.format(i, self.queue[i])
                 else:
                     for i in range(1, 5):
-                        desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
+                        desc += '{0}: [{1.title}]({1.url}) - Requested by **{1.requester.display_name}**\n'.format(i, self.queue[i])
                     # Display number of other songs
-                    temp = self.queue[6:]
-                    desc += 'And {0} more'.format(len(temp))
+                    desc += 'And {0} more'.format(len(self.queue[6:]))
 
             # Send embed
             qe = discord.Embed(type='rich', colour=discord.Colour(65535), description=desc)
