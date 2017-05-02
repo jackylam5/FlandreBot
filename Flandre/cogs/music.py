@@ -298,9 +298,9 @@ class MusicPlayer:
                             if queued > 0:
                                 # Tell the user how many songs have been queued                 
                                 if sc:
-                                    msg = 'Queued: **{0}** random songs [Videos in queue: {1}]'
+                                    msg = 'Queued: **{0}** random songs [Songs in queue: {1}]'
                                 else:
-                                    msg = 'Queued: **{0}** songs [Videos in queue: {1}]'
+                                    msg = 'Queued: **{0}** songs [Songs in queue: {1}]'
                             else:
                                 msg = 'No songs were added'
                             if self.time_left_paused is not None:
@@ -317,7 +317,7 @@ class MusicPlayer:
                             # Add song to queue
                             self.queue.append(Song(url, title, thumbnail, user))
                             # Tell the user the song has been queued
-                            msg = ':notes: Queued: **{0}** [Videos in queue: {1}]'
+                            msg = ':notes: Queued: **{0}** [Songs in queue: {1}]'
                             if self.time_left_paused is not None:
                                 msg += ' Current song is *PAUSED*'
                             await self.bot.edit_message(temp_mesg, msg.format(title, len(self.queue)))
@@ -476,7 +476,8 @@ class MusicPlayer:
                     for i in range(1, 5):
                         desc += '{0}: [{1[0].title}]({1[0].url}) - Requested by **{1[0].requester.display_name}**\n'.format(i, self.queue[i])
                     # Display number of other songs
-                    desc += 'And {0} more'.format(len(self.queue[6:]))
+                    temp = self.queue[6:]
+                    desc += 'And {0} more'.format(len(temp))
 
             # Send embed
             qe = discord.Embed(type='rich', colour=discord.Colour(65535), description=desc)
