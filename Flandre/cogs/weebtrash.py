@@ -192,6 +192,15 @@ class weebtrash:
                     self.notifications.pop(notify_id)
                     removed_counter += 1
 
+            # Save notifications.json
+            try:
+                with open('Flandre/data/weebtrash/notifications.json', 'w') as file:
+                    json.dump(self.notifications, file, indent=4, sort_keys=True)
+            except:
+                self.bot.log('critical', 'Flandre/data/weebtrash/notifications.json could not be saved. Please check it')
+            else:
+                self.bot.log('info', 'Flandre/data/weebtrash/notifications.json has been saved.')
+
             self.bot.log('info', "Found {0} currently airing anime. Removed {1} no longer airing anime from notification file".format(len(animes), removed_counter))
 
             # Get current date and reset airing today
@@ -401,7 +410,7 @@ class weebtrash:
         total_ep = int(next_airing['total_episodes'])
         if total_ep == 0:
             total_ep = '-'
-        anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2} hours {3} mins**'.format(next_airing, total_ep, str(countdown).split('.')[0]), inline=False)
+        anime_embed.add_field(name='Episode', value='#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2}**'.format(next_airing, total_ep, str(countdown).split('.')[0]), inline=False)
         # Add links to embed
         links = '[Anilist](https://anilist.co/anime/{0})'.format(next_airing['id'])
         if len(mal_data) > 0:
