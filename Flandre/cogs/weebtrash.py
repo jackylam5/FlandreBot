@@ -326,6 +326,53 @@ class weebtrash:
             if all_aired == False:        
                 self.anime_to_be_released.set()
 
+    async def hourlyNotifyer(self):
+        ''' Checks every hour (on the hour) and post if anything is airing in that hour 
+        '''
+        
+        # Wait for the next exact hour
+        next_hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))) + datetime.timedelta(hours=1)
+        time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+        await asyncio.sleep(round(time_left.total_seconds()))
+
+        while True:
+            airing_soon = []
+            time_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+            # Get all anime airing within the hour seconds <= 3660 but more that a min away
+            for anime in self.airing_today:
+                if anime['airing']['countdown'] != None:
+                    countdown = parse(anime['airing']['time']) - time_now
+                    if round(countdown.total_seconds()) <= 3660 and ound(countdown.total_seconds()) > 60:
+                        airing_soon.append(anime)
+
+            # Check if there are any airing soon
+            if len(airing_soon) > 0:
+                # Create description
+                desc = ''
+                for i, anime in enumerate(airing_soon):
+                    countdown = parse(anime['airing']['time']) - datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+                    # Tidy up if unknown eps
+                    total_ep = int(anime['total_episodes'])
+                    if total_ep == 0:
+                        total_ep = '-'
+                    desc += '{0}: [{1[title_romaji]}](https://anilist.co/anime/{1[id]}) ({1[type]}) [{1[airing][next_episode]}/{2}] in {3}\n'.format((i+1), anime, total_ep, str(countdown).split('.')[0])
+                
+                # Create embed
+                em = discord.Embed(type='rich', colour=10057145, description=desc)
+                em.set_author(name='Airing within the next hour:')
+                em.set_footer(text='Info from Anilist | {0}'.format(datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime('%c')), icon_url='https://anilist.co/img/logo_al.png')
+
+                # Send Embed
+                if len(self.subbed_channels) > 0:
+                    for channel in self.subbed_channels['channels']:
+                        subbed_channel = self.bot.get_channel(channel)
+                        await self.bot.send_message(subbed_channel, embed=em)
+
+            # Wait for the next exact hour
+            next_hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))) + datetime.timedelta(hours=1)
+            time_left = next_hour.replace(minute=0, second=0, microsecond=0) - datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+            await asyncio.sleep(round(time_left.total_seconds()))
+
     def send_cmd_help(self, ctx):
         if ctx.invoked_subcommand:
             pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
