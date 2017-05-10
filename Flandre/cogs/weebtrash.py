@@ -344,7 +344,7 @@ class weebtrash:
             for anime in self.airing_today:
                 if anime['airing']['countdown'] != None:
                     countdown = parse(anime['airing']['time']) - time_now
-                    if round(countdown.total_seconds()) <= 3660 and ound(countdown.total_seconds()) > 60:
+                    if round(countdown.total_seconds()) <= 3660 and round(countdown.total_seconds()) > 60:
                         airing_soon.append(anime)
 
             # Check if there are any airing soon
