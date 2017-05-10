@@ -32,6 +32,7 @@ class weebtrash:
             self.token_refresher = self.bot.loop.create_task(self.tokenRefresher())
             self.daily_anime_grabber = self.bot.loop.create_task(self.dailyAnimeGrabber())
             self.next_airing_sender = self.bot.loop.create_task(self.nextAiringSender())
+            self.hourly_notify = self.bot.loop.create_task(self.hourlyNotifyer())
 
     async def _unload(self):
         ''' Unload function for when it is unloaded
@@ -41,6 +42,7 @@ class weebtrash:
             self.token_refresher.cancel()
             self.daily_anime_grabber.cancel()
             self.next_airing_sender.cancel()
+            self.hourly_notify.cancel()
             self.airing_today = []
             self.all_airing_ids = {}
 
