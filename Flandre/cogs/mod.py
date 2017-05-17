@@ -616,11 +616,10 @@ class mod:
                     if not self.filter_immune(message):
                         # Check server wide filter first
                         for word in self.filter[message.server.id]['server']:
-                            # Remove symbols in the message
-                            msg = message.content
-                            for symbol in asciipunct:
-                                msg = msg.replace(symbol, '')
-                            found = re.search(word, msg, re.IGNORECASE)
+                            reg = ''
+                            for letter in word:
+                                reg += '[{0}{1}]+'.format(word, asciipunct)
+                            found = re.search(reg, message.content, re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 await self.bot.delete_message(message)
@@ -631,11 +630,10 @@ class mod:
                             # Check if channel is in filter if server wide did not trigger
                             if message.channel.id in self.filter[message.server.id]['channels']:
                                 for word in self.filter[message.server.id]['channels'][message.channel.id]:
-                                    # Remove symbols in the message
-                                    msg = message.content
-                                    for symbol in asciipunct:
-                                        msg = msg.replace(symbol, '')
-                                    found = re.search(word, msg, re.IGNORECASE)
+                                    reg = ''
+                                    for letter in word:
+                                        reg += '[{0}{1}]+'.format(word, asciipunct)
+                                    found = re.search(reg, message.content, re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
                                         await self.bot.delete_message(message)
