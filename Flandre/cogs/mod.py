@@ -451,7 +451,6 @@ class mod:
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 await self.bot.delete_message(message)
-                                await self.bot.send_message(message.channel, "{0}, Oi that had a word that's not allowed in here. Don't do that".format(message.author.mention))
                                 break
 
 def setup(bot):
