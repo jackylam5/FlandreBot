@@ -6,6 +6,7 @@ from os.path import isdir
 import json
 import asyncio
 import re
+from string import punctuation as asciipunct
 
 class mod:
     '''Moderation tools
@@ -342,7 +343,7 @@ class mod:
         # Check if the server has words being filtered at all
         if ctx.message.server.id in self.filter:
             if self.filter[ctx.message.server.id]['server']:
-                msg = '```\n'
+                msg = 'Server Wide Filter:\n```\n'
                 for filtered in self.filter[ctx.message.server.id]['server']:
                     msg += '{0}\n'.format(filtered)
                     # If the length of the messages is greater than 1600 send it and make another message for the rest
@@ -460,7 +461,7 @@ class mod:
         # Check if the server has words being filtered at all
         if ctx.message.server.id in self.filter:
             if ctx.message.channel.id in self.filter[ctx.message.server.id]['channels']:
-                msg = '```\n'
+                msg = 'Channel Only Filter:\n```\n'
                 for filtered in self.filter[ctx.message.server.id]['channels'][ctx.message.channel.id]:
                     msg += '{0}\n'.format(filtered)
                     # If the length of the messages is greater than 1600 send it and make another message for the rest
@@ -615,7 +616,11 @@ class mod:
                     if not self.filter_immune(message):
                         # Check server wide filter first
                         for word in self.filter[message.server.id]['server']:
-                            found = re.search(word, message.content, re.IGNORECASE)
+                            # Remove symbols in the message
+                            msg = message.content
+                            for symbol in asciipunct:
+                                msg = msg.replace(symbol, '')
+                            found = re.search(word, msg, re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 await self.bot.delete_message(message)
@@ -626,7 +631,11 @@ class mod:
                             # Check if channel is in filter if server wide did not trigger
                             if message.channel.id in self.filter[message.server.id]['channels']:
                                 for word in self.filter[message.server.id]['channels'][message.channel.id]:
-                                    found = re.search(word, message.content, re.IGNORECASE)
+                                    # Remove symbols in the message
+                                    msg = message.content
+                                    for symbol in asciipunct:
+                                        msg = msg.replace(symbol, '')
+                                    found = re.search(word, msg, re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
                                         await self.bot.delete_message(message)
