@@ -359,7 +359,7 @@ class mod:
             await self.bot.say('Nothing is being filtered in this server at all')
 
     @filter_server.command(name='add', pass_context=True, no_pm=True)
-    @permissions.checkMod()
+    @permissions.checkAdmin()
     async def filter_server_add(self, ctx, *words : str):
         ''' Adds words or sentences to the server wide filter.
             Make sure to use double quotes for sentences
@@ -398,7 +398,7 @@ class mod:
             await self.bot.say('{0}, You need to give me something to filter'.format(ctx.message.author.mention))
 
     @filter_server.command(name='remove', pass_context=True, no_pm=True)
-    @permissions.checkMod()
+    @permissions.checkAdmin()
     async def filter_server_remove(self, ctx, *words : str):
         ''' Removes words or sentences from the server wide filter
             Make sure to use double quotes for sentences
