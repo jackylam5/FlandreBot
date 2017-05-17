@@ -5,6 +5,7 @@ from os import mkdir
 from os.path import isdir
 import json
 import asyncio
+import re
 
 class mod:
     '''Moderation tools
@@ -247,7 +248,7 @@ class mod:
             if ctx.message.server.id in self.logging_channels:
                 log_channel = self.bot.get_channel(self.logging_channels[ctx.message.server.id])
                 await self.bot.send_message(log_channel, '{0} messages have been removed!'.format(deleted))
-        except discord.erros.Forbidden:
+        except discord.errors.Forbidden:
             await self.bot.say("I can't do that. I lack the permissions to do so")
                         
     @cleanup.command(no_pm=True, pass_context=True)
@@ -308,6 +309,152 @@ class mod:
         except discord.erros.Forbidden:
             await self.bot.say("I can't do that. I lack the permissions to do so")
 
+    @commands.group(name='filter', pass_context=True, no_pm=True)
+    async def _filter(self, ctx):
+        ''' Adds or removes words from the filter
+            It ignores case and will also remove the word if it is contained in another
+            It can also remove full sentences if needed
+        '''
+        
+        if ctx.invoked_subcommand is None:
+            pages = self.send_cmd_help(ctx)
+            for page in pages:
+                await self.bot.send_message(ctx.message.channel, page)
+
+    @_filter.command(name='show', pass_context=True, no_pm=True)
+    async def filter_show(self, ctx):
+        ''' Shows the current words/sentences in the filter
+            Shows each on a single line will also send mutiple messages if needed
+        '''
+
+        # Check if the server has words being filtered
+        if ctx.message.server.id in self.filter:
+            # Make message and loop over each word being filtered
+            msg = '```\n'
+            for filtered in self.filter[ctx.message.server.id]:
+                msg += '{0}\n'.format(filtered)
+                # If the length of the messages is greater than 1600 send it and make another message for the rest
+                if len(msg) > 1600:
+                    msg += '```'
+                    await self.bot.say(msg)
+                    msg = '```\n'
+            # Send message
+            msg += '```'
+            await self.bot.say(msg)
+        else:
+            await self.bot.say('Nothing is being filtered in this server')
+
+    @_filter.command(name='add', pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def filter_add(self, ctx, *words : str):
+        ''' Adds words or sentences to the filter
+            Make sure to use double quotes for sentences
+            Examples:
+            filter add word1 word2 word3
+            filter add "This is a sentence"
+        '''
+
+        words_added = False # Used just to know if the file is to be saved
+        # Check if any words were suppiled
+        if words:
+            if ctx.message.channel.permissions_for(ctx.message.server.me).manage_messages:
+                if ctx.message.server.id not in self.filter:
+                    self.filter[ctx.message.server.id] = []
+                    self.bot.log('info', 'Server {0.name} ({0.id}) has been added to the filter'.format(ctx.message.server))
+                # Loop over each word in words
+                for word in words:
+                    # Check if word is already being filtered if it is just ignore it
+                    if word in self.filter[ctx.message.server.id]:
+                        continue
+                    else:
+                        self.filter[ctx.message.server.id].append(word)
+                        words_added = True
+                # Save the file if needed
+                if words_added:
+                    with open('Flandre/data/mod/filter.json', 'w') as file:
+                        json.dump(self.filter, file)
+                    self.bot.log('info', 'Flandre/data/mod/filter.json has been saved. Reason: {0.name} ({0.id}) has added words to filter'.format(ctx.message.server))
+                # Send message saying words have been added
+                await self.bot.say('Words have been added to the filter')
+            else:
+                await self.bot.say('{0}, I don\'t have the permissions to delete messages so I can filter anything')
+        else:
+            await self.bot.say('{0} you need to give me something to filter'.format(ctx.message.author.mention))
+
+    @_filter.command(name='remove', pass_context=True, no_pm=True)
+    @permissions.checkMod()
+    async def filter_remove(self, ctx, *words : str):
+        ''' Removes words or sentences to the filter
+            Make sure to use double quotes for sentences
+            Examples:
+            filter remove word1 word2 word3
+            filter remove "This is a sentence"
+        '''
+
+        words_removed = False # Used just to know if the file is to be saved
+        # Check if any words were suppiled
+        if words:
+            # Check if there is anything to remove
+            if ctx.message.server.id in self.filter:
+                # Loop over words
+                for word in words:
+                    if word not in self.filter[ctx.message.server.id]:
+                        continue
+                    else:
+                        self.filter[ctx.message.server.id].remove(word)
+                        words_removed = True
+                # Check if the filter for that server is empty if so remove it
+                if len(self.filter[ctx.message.server.id]) == 0:
+                    self.filter.pop(ctx.message.server.id)
+                    self.bot.log('info', 'Server {0.name} ({0.id}) has been removed from the filter'.format(ctx.message.server))
+                # Save the file is needed
+                if words_removed:
+                    with open('Flandre/data/mod/filter.json', 'w') as file:
+                        json.dump(self.filter, file)
+                    self.bot.log('info', 'Flandre/data/mod/filter.json has been saved. Reason: {0.name} ({0.id}) has removed words from filter'.format(ctx.message.server))
+                # Send message saying words have been added
+                await self.bot.say('Words have been removed from the filter')
+            else:
+                await self.bot.say('Nothing is being filtered in this server to be removed')
+        else:
+            await self.bot.say('{0} you need to give me words to remove from the filter'.format(ctx.message.author.mention))
+
+    def filter_immune(self, message):
+        ''' Check if user can not be filtered
+        '''
+
+        # Check if bot owner
+        if message.author.id in self.bot.config['ownerid']:
+            return True
+        elif message.author.permissions_in(message.channel).manage_server:
+            # Admin in server
+            return True
+        elif message.author.permissions_in(message.channel).manage_channels:
+            # Mod in server
+            return True
+
+    async def check_filter(self, message):
+        ''' Check if the message contains a filtered word from a server
+        '''
+
+        # Check that the message was not a DM
+        if not message.channel.is_private:
+            # Double check bot can delete messages in server
+            if message.channel.permissions_for(message.server.me).manage_messages:
+                # Check the sever has words in filter
+                if message.server.id in self.filter:
+                    # Check user is not immune from filter
+                    if not self.filter_immune(message):
+                        # Loop over everything in server filter
+                        for word in self.filter[message.server.id]:
+                            found = re.search(word, message.content, re.IGNORECASE)
+                            # If re found the word delete it and tell the user
+                            if found is not None:
+                                await self.bot.delete_message(message)
+                                await self.bot.send_message(message.channel, "{0}, Oi that had a word that's not allowed in here. Don't do that".format(message.author.mention))
+                                break
+
 def setup(bot):
     n = mod(bot)
+    bot.add_listener(n.check_filter, "on_message")
     bot.add_cog(n)

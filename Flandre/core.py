@@ -132,7 +132,7 @@ class Bot(commands.Bot):
         # Check if config has a prefix
         if self.config['prefix'] == '':
             self.config['prefix'] = '!'
-            self.logger.warning("Prefix in config was empty. Using '!' as the prefix")
+            self.log('warn', "Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config 
         super().__init__(command_prefix = commands.when_mentioned_or(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
