@@ -4,6 +4,9 @@ from random import choice, randint
 import upsidedown
 import aiohttp
 import asyncio
+from Flandre import permissions
+import re
+from urllib.parse import quote
 
 class general:
     '''Holds commands that don't have a suitable place else where'''
@@ -12,24 +15,30 @@ class general:
         self.bot = bot
         self.polls = {}
 
-    @commands.command()
-    async def ping(self):
+    @commands.command(pass_context=True)
+    async def ping(self, ctx):
         ''' Pong '''
         
         await self.bot.say("pong")
 
-    @commands.command()
-    async def choose(self, *choices):
+    @commands.command(pass_context=True)
+    async def choose(self, ctx, *choices):
         '''Make the bot choose for you. Each word is a choice
         '''
 
         if len(choices) < 2:
             await self.bot.say('Not really letting me choose are you')
         else:
-            await self.bot.say(choice(choices))
+            picked = choice(choices)
+            refound = re.search('<@!(\d*)>', picked)
+            if refound is not None:
+                user = discord.utils.get(self.bot.get_all_members(), id=refound[1])
+                await self.bot.say(picked.replace(refound[0], user.display_name))
+            else:
+                await self.bot.say(picked)
 
     @commands.command(pass_context=True)
-    async def roll(self, ctx, *number):
+    async def roll(self, ctx, *number : str):
         '''Rolls an random number from your choice. 
         If none supplied defaults to 100
         '''
@@ -48,7 +57,13 @@ class general:
 
         # Check if user was mentioned
         if ctx.message.mentions:
-            user = ctx.message.mentions[0]
+            if ctx.message.mentions[0] == self.bot.user:
+                if len(ctx.message.mentions) == 1:
+                    user = None
+                else:
+                    user = ctx.message.mentions[1]
+            else:
+                user = ctx.message.mentions[0]
 
         if user != None and isinstance(user, discord.Member):
             message = ''
@@ -95,7 +110,7 @@ class general:
             await self.bot.say("Please choose between rock, paper or scissor")
 
     @commands.command(name = "8", pass_context=True, aliases=["8ball"])
-    async def _8ball(self, ctx, *question): 
+    async def _8ball(self, ctx, *question : str): 
         '''Ask 8ball a question!
         '''
         
@@ -107,22 +122,21 @@ class general:
             await self.bot.say("{0}, Please ask a question".format(ctx.message.author.mention))
 
     @commands.command(pass_context=True)
-    async def lmgtfy(self, ctx, *text):
+    async def lmgtfy(self, ctx, *, text: str):
         '''Does a lmgtfy 
         '''
         
         if text:
-            await self.bot.say("http://lmgtfy.com/?q={0}".format("+".join(text)))
+            await self.bot.say("http://lmgtfy.com/?q={0}".format(quote(text)))
         else:
             await self.bot.say("{0}, Please include search term".format(ctx.message.author.mention))
 
     @commands.command(pass_context=True)
-    async def urban(self, ctx, *search_terms):
+    async def urban(self, ctx, *, search_terms : str):
         '''Urban Dictionary search
         '''
         if search_terms:
-            search_terms = "+".join(search_terms)
-            search = "http://api.urbandictionary.com/v0/define?term=" + search_terms
+            search = "http://api.urbandictionary.com/v0/define?term=" + quote(search_terms)
             
             with aiohttp.ClientSession() as aioclient:
                 async with aioclient.get(search) as resp:
@@ -131,8 +145,8 @@ class general:
             
             if status_code == 200:
                 if data["list"]:
-                    definition = data['list'][0]['definition']
-                    example = data['list'][0]['example']
+                    definition = data['list'][0]['definition'].replace('@everyone', 'everyone')
+                    example = data['list'][0]['example'].replace('@everyone', 'everyone')
                     await self.bot.say("**Definition:** {0}\n\n**Example:** {1}".format(definition, example))
                 else:
                     await self.bot.say("{0}, Your search terms gave no results.".format(ctx.message.author.mention))
@@ -142,7 +156,7 @@ class general:
             await self.bot.say("{0}, You didn't search for anything".format(ctx.message.author.mention))
 
     @commands.command(pass_context=True, no_pm=True)
-    async def poll(self, ctx, *text):
+    async def poll(self, ctx, *text : str):
         '''Starts/stops a poll
 
         Usage example:
@@ -219,7 +233,7 @@ class Poll():
     async def start(self):
         msg = "**POLL STARTED!**\n\n{}\n\n".format(self.question)
         for id, data in self.answers.items():
-            msg += "{}. *{}*\n".format(id, data["ANSWER"])
+            msg += "{}. {}\n".format(id, data["ANSWER"])
         msg += "\nType the number to vote!"
         await self.cog.bot.send_message(self.channel, msg)
         await asyncio.sleep(30)
@@ -230,7 +244,7 @@ class Poll():
         self.valid = False
         msg = "**POLL ENDED!**\n\n{}\n\n".format(self.question)
         for data in self.answers.values():
-            msg += "*{}* - {} votes\n".format(data["ANSWER"], str(data["VOTES"]))
+            msg += "{} - {} votes\n".format(data["ANSWER"], str(data["VOTES"]))
         await self.cog.bot.send_message(self.channel, msg)
         self.cog.remove_poll(self.channel.id)
         self.cog.bot.log('info', "Poll deleted for channel: {0}".format(self.channel.id))

@@ -266,3 +266,7 @@ class Bot(commands.Bot):
             await self.logout()
             exit("No cog folder found. Which means no commands found. Bot logged off")
 
+    async def on_message(self, message):
+
+        if not message.author.bot:
+            await self.process_commands(message)
