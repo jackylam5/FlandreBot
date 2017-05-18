@@ -147,7 +147,7 @@ class general:
                 if data["list"]:
                     definition = data['list'][0]['definition'].replace('@everyone', 'everyone')
                     example = data['list'][0]['example'].replace('@everyone', 'everyone')
-                    await self.bot.say("**Definition:** {0}\n\n**Example:** {1}".format(definition, example))
+                    await self.bot.say("**Definition:** {0}\n\n**Example:** {1}".format(definition.replace('@here', 'here'), example.replace('@here', 'here')))
                 else:
                     await self.bot.say("{0}, Your search terms gave no results.".format(ctx.message.author.mention))
             else:
