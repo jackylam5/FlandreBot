@@ -641,7 +641,48 @@ class mod:
                                             await self.bot.send_message(message.channel, self.filter[message.server.id]['message'].replace('%user%' , message.author.mention))
                                         break
 
+    async def check_edit_filter(self, before, after):
+        ''' Check if the edited message contains a filtered word from a server
+        '''
+
+        message = after
+        # Check that the message was not a DM
+        if not message.channel.is_private:
+            # Double check bot can delete messages in server
+            if message.channel.permissions_for(message.server.me).manage_messages:
+                # Check the sever has words in filter
+                if message.server.id in self.filter:
+                    # Check user is not immune from filter
+                    if not self.filter_immune(message):
+                        # Check server wide filter first
+                        for word in self.filter[message.server.id]['server']:
+                            reg = ''
+                            for letter in word:
+                                reg += '{0}+[{1}]*'.format(letter, asciipunct)
+                            found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
+                            # If re found the word delete it and tell the user
+                            if found is not None:
+                                await self.bot.delete_message(message)
+                                if self.filter[message.server.id]['message'] is not None:
+                                    await self.bot.send_message(message.channel, self.filter[message.server.id]['message'].replace('%user%' , message.author.mention))
+                                break
+                        else:
+                            # Check if channel is in filter if server wide did not trigger
+                            if message.channel.id in self.filter[message.server.id]['channels']:
+                                for word in self.filter[message.server.id]['channels'][message.channel.id]:
+                                    reg = ''
+                                    for letter in word:
+                                        reg += '{0}+[{1}]*'.format(letter, asciipunct)
+                                    found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
+                                    # If re found the word delete it and tell the user
+                                    if found is not None:
+                                        await self.bot.delete_message(message)
+                                        if self.filter[message.server.id]['message'] is not None:
+                                            await self.bot.send_message(message.channel, self.filter[message.server.id]['message'].replace('%user%' , message.author.mention))
+                                        break
+
 def setup(bot):
     n = mod(bot)
     bot.add_listener(n.check_filter, "on_message")
+    bot.add_listener(n.check_edit_filter, "on_message_edit")
     bot.add_cog(n)
