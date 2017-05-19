@@ -124,11 +124,11 @@ class Bot(commands.AutoShardedBot):
 
                 except Exception as e:
                     # Something made the loading fail so log it with reason and tell user to check it
-                    self.logger.critical(f'Load failed. Reason: {e}')
+                    self.logger.critical(f'Load failed for {file}. Reason: {e}')
                     continue
                 
                 else:
-                    self.logger.info('Loaded cog: {file}')
+                    self.logger.info(f'Loaded cog: {file}')
         else:
             print("No python files found. Which means no commands found. Bot logged off")
             self.logger.critical("No python files found. Which means no commands found. Bot logged off")

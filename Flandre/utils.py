@@ -36,7 +36,7 @@ class reloader:
         '''
 
         # Log that a module/cog has been requested to be loaded
-        self.bot.logger.info(f'Load module/cog: {module}. Requested by {author.name}#{author.discriminator}')
+        self.bot.logger.info(f'Load module/cog: {module}. Requested by {ctx.author.name}#{ctx.author.discriminator}')
 
         # Load cog
         try:
@@ -50,7 +50,7 @@ class reloader:
         else:
             # The cog loaded so we log that it was loaded and also tell the user
             self.bot.logger.info(f'Loaded cog: {module}')
-            await ctx.send('Loaded cog: {module}')
+            await ctx.send(f'Loaded cog: {module}')
 
     @commands.command()
     @permissions.checkOwners()
@@ -59,7 +59,7 @@ class reloader:
         '''
 
         # Log that a module/cog has been requested to be unloaded
-        self.bot.logger.info(f'Unload module/cog: {module}. Requested by {author.name}#{author.discriminator}')
+        self.bot.logger.info(f'Unload module/cog: {module}. Requested by {ctx.author.name}#{ctx.author.discriminator}')
 
         # Unload cog
         try:
@@ -73,7 +73,7 @@ class reloader:
         else:
             # The cog unloaded so we log that it was unloaded and also tell the user
             self.bot.logger.info(f'Unloaded cog: {module}')
-            await ctx.send('Unloaded cog: {module}')
+            await ctx.send(f'Unloaded cog: {module}')
 
     @commands.command()
     @permissions.checkOwners()
@@ -82,7 +82,7 @@ class reloader:
         '''
 
         # Log that a module/cog has been requested to be reloaded
-        self.bot.logger.info(f'Reload module/cog: {module}. Requested by {author.name}#{author.discriminator}')
+        self.bot.logger.info(f'Reload module/cog: {module}. Requested by {ctx.author.name}#{ctx.author.discriminator}')
 
         # Reload cog
         try:
@@ -97,7 +97,7 @@ class reloader:
         else:
             # The cog unloaded so we log that it was unloaded and also tell the user
             self.bot.logger.info(f'Reloaded cog: {module}')
-            await ctx.send('Reloaded cog: {module}')
+            await ctx.send(f'Reloaded cog: {module}')
 
 def checkCoreFolders(logger):
     ''' Used to check if the bot has a cogs and data folder
@@ -121,25 +121,40 @@ def checkCogConfig(cog, filename, default={}):
     '''
 
     # Check if cog has a folder in data folder
-    if not isdir(f'{__package__}.data.{cog.__name__}'):
+    if not isdir(f'{__package__}/data/{cog.__class__.__name__}'):
         # Log the folder is missing and make it
-        cog.bot.logger.warning(f'"{__package__}.data.{cog.__name__}" is missing it has been make fore you')
-        mkdir(f'{__package__}.data.{cog.__name__}')
+        cog.bot.logger.warning(f'"{__package__}/data/{cog.__class__.__name__}" is missing it has been make for you')
+        mkdir(f'{__package__}/data/{cog.__class__.__name__}')
 
     # Check for file
     try:
-        with open(f'{__package__}/data/{cog.__name__}/{filename}', 'r') as file:
-            return json.load(file)
+        with open(f'{__package__}/data/{cog.__class__.__name__}/{filename}', 'r') as file:
+            data = json.load(file)
     
-    except (json.decoder.JSONDecodeError, IOError) as e:
+    except Exception as e:
         # If the file could not be loaded
-        cog.bot.logger.error(f'{__package__}/data/{cog.__name__}/{filename} could not be loaded')
+        cog.bot.logger.error(f'{__package__}/data/{cog.__class__.__name__}/{filename} could not be loaded')
         cog.bot.logger.error(f'Reason: {e}')
 
         # Make the file for user again
-        with open(f'{__package__}/data/{cog.__name__}/{filename}', 'w') as file:
-                json.dump(default, file)
-        cog.bot.logger.info(f'{__package__}/data/{cog.__name__}/{filename} has been remade for you')
+        with open(f'{__package__}/data/{cog.__class__.__name__}/{filename}', 'w') as file:
+            json.dump(default, file, indent=4, sort_keys=True)
+        cog.bot.logger.info(f'{__package__}/data/{cog.__class__.__name__}/{filename} has been remade for you')
 
         return default
+
+    else:
+        return data
+
+def saveCogConfig(cog, filename, data):
+    ''' Saves the data given in data to the file called filename
+    '''
+
+    try:
+        with open(f'{__package__}/data/{cog.__class__.__name__}/{filename}', 'w') as file:
+            json.dump(data, file, indent=4, sort_keys=True)
+    except:
+        cog.bot.logger.critical(f'{__package__}/data/{cog.__class__.__name__}/{filename} could not be saved. Please check it')
+    else:
+        cog.bot.logger.info(f'{__package__}/data/{cog.__class__.__name__}/{filename} has been saved.')
 

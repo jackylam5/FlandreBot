@@ -4,12 +4,12 @@ import json
 
 def checkOwnerPerm(ctx):
     try:
-        with open(f'{__package__}/config.json', 'r') as config:
-            config = json.load(config)
+        with open(f'{__package__}/config.json', 'r') as file:
+            config = json.load(file)
     except:
         return False
     else:
-        if author.id in config['ownerid']:
+        if ctx.author.id in config['ownerid']:
             return True
         else:
             return False
@@ -27,7 +27,7 @@ def checkModPerm(ctx):
 def checkOwners():
     ''' Check if user in in the config file as a owner
     '''
-
+    
     return commands.check(checkOwnerPerm)
 
 def checkAdmin():
