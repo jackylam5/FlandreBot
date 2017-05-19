@@ -11,6 +11,8 @@ from discord.ext import commands
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import json
+from os import listdir
+import sys
 # Import Flandre Errors
 from .errors import *
 from . import utils
@@ -96,9 +98,46 @@ class Bot(commands.AutoShardedBot):
         Then load cogs
         '''
 
+        # Tell user bot has logged in with how many shards
         shardnumber = 1
         if self.shard_ids:
             shardnumber = len(self.shard_ids)
         self.logger.info(f'Logged in as: {self.user.name} ({self.user.id}) using {shardnumber} shards')
+        
+        # Change the bots game to what is in the config
         await self.change_presence(game=discord.Game(name=self.config['game']))
 
+        # Load the owner reloader 
+        self.add_cog(utils.reloader(self))
+        self.logger.info('Loaded cog: reloader')
+
+        # Check for data and cog foders
+        utils.checkCoreFolders(self.logger)
+
+        # Load cogs
+        files = [file.replace('.py', '') for file in listdir(f'{__package__}/cogs') if ".py" in file]
+
+        if files:
+            for file in files:
+                try:
+                    self.load_extension(f'{__package__}.cogs.{file}')
+
+                except Exception as e:
+                    # Something made the loading fail so log it with reason and tell user to check it
+                    self.logger.critical(f'Load failed. Reason: {e}')
+                    continue
+                
+                else:
+                    self.logger.info('Loaded cog: {file}')
+        else:
+            print("No python files found. Which means no commands found. Bot logged off")
+            self.logger.critical("No python files found. Which means no commands found. Bot logged off")
+            await self.logout()
+            sys.exit()
+
+    async def on_message(self, message):
+        ''' Make sure other bots can not trigger the bot
+        '''
+        
+        if not message.author.bot:
+            await self.process_commands(message)
