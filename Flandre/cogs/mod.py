@@ -22,12 +22,13 @@ class mod:
         self.bot.remove_listener(self.check_filter, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
 
-    def send_cmd_help(self, ctx):
+    async def send_cmd_help(self, ctx):
         if ctx.invoked_subcommand:
-            pages = self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
+            pages = await self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
             return pages
+
         else:
-            pages = self.bot.formatter.format_help_for(ctx, ctx.command)
+            pages = await self.bot.formatter.format_help_for(ctx, ctx.command)
             return pages
 
     @commands.command()
@@ -360,7 +361,7 @@ class mod:
         '''
         
         if ctx.invoked_subcommand is None:
-            pages = self.send_cmd_help(ctx)
+            pages = await self.send_cmd_help(ctx)
             for page in pages:
                 await ctx.send(page)
 
@@ -373,7 +374,7 @@ class mod:
         '''
         
         if ctx.subcommand_passed == 'server':
-            pages = self.send_cmd_help(ctx)
+            pages = await self.send_cmd_help(ctx)
             for page in pages:
                 await ctx.send(page)
 
@@ -501,7 +502,7 @@ class mod:
         '''
         
         if ctx.subcommand_passed == 'channel':
-            pages = self.send_cmd_help(ctx)
+            pages = await self.send_cmd_help(ctx)
             for page in pages:
                 await ctx.send(page)
 
@@ -632,7 +633,8 @@ class mod:
     @commands.guild_only()
     @permissions.checkMod()
     async def message(self, ctx, *, msg : str = ''):
-        ''' Makes the bot send a message when something is filterd (If no args given it removes the message)
+        ''' Makes the bot send a message when something is filtered
+            No args removes the message
             Using %user% in the message will make the bot place a mention to the user whose messages was filtered
         '''
 
