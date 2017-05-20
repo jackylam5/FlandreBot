@@ -17,15 +17,6 @@ class general:
 
         self.bot.remove_listener(self.check_poll_votes, "on_message")
 
-    async def send_cmd_help(self, ctx):
-        if ctx.invoked_subcommand:
-            pages = await self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
-            return pages
-
-        else:
-            pages = await self.bot.formatter.format_help_for(ctx, ctx.command)
-            return pages
-
     @commands.command(hidden=True)
     async def ping(self, ctx):
         ''' Pong '''
@@ -153,7 +144,7 @@ class general:
         '''
         
         if ctx.invoked_subcommand is None:
-            pages = await self.send_cmd_help(ctx)
+            pages = await utils.sendCmdHelp(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
 

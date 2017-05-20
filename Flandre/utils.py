@@ -158,3 +158,11 @@ def saveCogConfig(cog, filename, data):
     else:
         cog.bot.logger.info(f'{__package__}/data/{cog.__class__.__name__}/{filename} has been saved.')
 
+async def sendCmdHelp(bot, ctx):
+    if ctx.invoked_subcommand:
+        pages = await bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
+        return pages
+
+    else:
+        pages = await bot.formatter.format_help_for(ctx, ctx.command)
+        return pages

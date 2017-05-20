@@ -22,15 +22,6 @@ class mod:
         self.bot.remove_listener(self.check_filter, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
 
-    async def send_cmd_help(self, ctx):
-        if ctx.invoked_subcommand:
-            pages = await self.bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
-            return pages
-
-        else:
-            pages = await self.bot.formatter.format_help_for(ctx, ctx.command)
-            return pages
-
     def cleanReason(self, reason):
         ''' Removeds ` from the reason to stop escaping and format mentions if in reason
         '''
@@ -251,7 +242,7 @@ class mod:
         '''
 
         if ctx.invoked_subcommand is None:
-            pages = self.send_cmd_help(ctx)
+            pages = await utils.sendCmdHelp(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
 
@@ -380,7 +371,7 @@ class mod:
         '''
         
         if ctx.invoked_subcommand is None:
-            pages = await self.send_cmd_help(ctx)
+            pages = await utils.sendCmdHelp(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
 
@@ -393,7 +384,7 @@ class mod:
         '''
         
         if ctx.subcommand_passed == 'server':
-            pages = await self.send_cmd_help(ctx)
+            pages = await utils.sendCmdHelp(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
 
@@ -522,7 +513,7 @@ class mod:
         '''
         
         if ctx.subcommand_passed == 'channel':
-            pages = await self.send_cmd_help(ctx)
+            pages = await utils.sendCmdHelp(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
 
