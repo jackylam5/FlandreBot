@@ -31,6 +31,21 @@ class mod:
             pages = await self.bot.formatter.format_help_for(ctx, ctx.command)
             return pages
 
+    def cleanReason(self, reason):
+        ''' Removeds ` from the reason to stop escaping and format mentions if in reason
+        '''
+
+        reason = reason.replace('`', '')
+
+        matches = re.findall('(<@!?(\d*)>)', reason)
+        
+        for match in matches:
+            user = self.bot.get_user(int(match[1]))
+            reason = reason.replace(match[0], f'@{user.name}#{user.discriminator}')
+
+        return reason
+
+
     @commands.command()
     @commands.guild_only()
     @permissions.checkAdmin()
@@ -64,6 +79,7 @@ class mod:
                 await ctx.guild.kick(user)
                 await ctx.send("Done. User kicked")
             else:
+                reason = self.cleanReason(reason)
                 await ctx.guild.kick(user, reason=reason)
                 await ctx.send(f"Done. User kicked for reason: `{reason}`")            
         
@@ -95,6 +111,7 @@ class mod:
                 await ctx.guild.ban(user, delete_message_days=days)
                 await ctx.send("Done. User banned")
             else:
+                reason = self.cleanReason(reason)
                 await ctx.guild.ban(user, reason=reason, delete_message_days=days)
                 await ctx.send(f"Done. User banned for reason: `{reason}`")
 
@@ -135,6 +152,7 @@ class mod:
                     await ctx.guild.unban(user)
                     await ctx.send("Done. User unbanned")
                 else:
+                    reason = self.cleanReason(reason)
                     await ctx.guild.unban(user, reason=reason)
                     await ctx.send(f"Done. User unbanned for reason: `{reason}`")
 
@@ -170,6 +188,7 @@ class mod:
                 await ctx.guild.unban(user)
                 await ctx.send("Done. User softbanned")
             else:
+                reason = self.cleanReason(reason)
                 await ctx.guild.ban(user, reason=f'Softban: {reason}', delete_message_days=1)
                 await ctx.guild.unban(user, reason=reason)
                 await ctx.send(f"Done. User softbanned for reason: `{reason}`")
@@ -388,17 +407,18 @@ class mod:
         # Check if the server has words being filtered at all
         if str(ctx.guild.id) in self.filter:
             if self.filter[str(ctx.guild.id)]['server']:
-                msg = 'Server Wide Filter:\n```\n'
+                msg = f'Server Wide Filter for {ctx.guild.name}:\n```\n'
                 for filtered in self.filter[str(ctx.guild.id)]['server']:
-                    msg += '{0}\n'.format(filtered)
+                    msg += '"{0}" '.format(filtered)
                     # If the length of the messages is greater than 1600 send it and make another message for the rest
                     if len(msg) > 1600:
-                        msg += '```'
-                        await ctx.send(msg)
+                        msg += '\n```'
+                        await ctx.author.send(msg)
                         msg = '```\n'
                 # Send message
-                msg += '```'
-                await ctx.send(msg)
+                msg += '\n```'
+                await ctx.author.send(msg)
+                await ctx.send('List sent in DM')
             else:
                 await ctx.send('Nothing is being filtered server wide')
         else:
@@ -516,17 +536,18 @@ class mod:
         # Check if the server has words being filtered at all
         if str(ctx.guild.id) in self.filter:
             if str(ctx.channel.id) in self.filter[str(ctx.guild.id)]['channels']:
-                msg = 'Channel Only Filter:\n```\n'
+                msg = f'Channel Only Filter for {ctx.channel.name}:\n```\n'
                 for filtered in self.filter[str(ctx.guild.id)]['channels'][str(ctx.channel.id)]:
-                    msg += '{0}\n'.format(filtered)
+                    msg += '"{0}" '.format(filtered)
                     # If the length of the messages is greater than 1600 send it and make another message for the rest
                     if len(msg) > 1600:
-                        msg += '```'
-                        await ctx.send(msg)
+                        msg += '\n```'
+                        await ctx.author.send(msg)
                         msg = '```\n'
                 # Send message
-                msg += '```'
-                await ctx.send(msg)
+                msg += '\n```'
+                await ctx.author.send(msg)
+                await ctx.send('List sent in DM')
             else:
                 await ctx.send('Nothing is being filtered in this channel (except server wide filter)')
         else:
