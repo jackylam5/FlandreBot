@@ -6,4 +6,5 @@ Always a WIP
 - Main bot
     - Python 3.6+
     - [discord.py](https://github.com/Rapptz/discord.py)
-
+- Music Cog
+    - [youtube-dl](https://rg3.github.io/youtube-dl/)
