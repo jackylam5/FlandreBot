@@ -9,7 +9,7 @@ Written by jackylam5 & maware
 import discord
 from discord.ext import commands
 import logging
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 import json
 from os import listdir
 import sys
@@ -59,7 +59,7 @@ class Bot(commands.AutoShardedBot):
         logger.setLevel(logging.DEBUG)
 
         # Make file handler for log file
-        fh = TimedRotatingFileHandler(filename=f'{__package__}.log', when='d', interval=1, backupCount=5, encoding='utf-8')
+        fh = RotatingFileHandler(filename=f'{__package__}.log', mode='a', maxBytes=5*1024*1024, backupCount=5, encoding='utf-8', delay=0)
         fh.setLevel(logging.DEBUG)
 
         # Make the format for log file
@@ -162,7 +162,24 @@ class Bot(commands.AutoShardedBot):
                 # Temp remove the mention so prefix can be checked
                 content = message.content.replace(self.user.mention, '').strip()
                 
-                if content[0] == self.config['prefix']:
-                    # Add the mention back with the extra prefix removed
-                    message.content = f'{self.user.mention} {content[1:]}'
-                    await self.process_commands(message)
+                if content != ''
+                    if content[0] == self.config['prefix']:
+                        # Add the mention back with the extra prefix removed
+                        message.content = f'{self.user.mention} {content[1:]}'
+                        await self.process_commands(message)
+
+    async def on_command_error(self, ctx, error):
+        """Deals with errors when a command is invoked."""
+
+        if isinstance(error, commands.errors.CommandNotFound):
+            pass
+        elif isinstance(error, commands.errors.MissingRequiredArgument):
+            await ctx.send(f'Argument `{error.param}` missing')
+        elif isinstance(error, commands.errors.NoPrivateMessage):
+            await ctx.send('Command can\'t be used in a Private Message')
+        elif isinstance(error, commands.errors.CheckFailure):
+            await ctx.send('You do not have permission to execute that command')
+        elif isinstance(error, commands.errors.BadArgument):
+            await ctx.send('Arguement error')
+        else:
+        self.bot.logger.exception('Command "%s". Message "%s"', ctx.command, ctx.message.content, exc_info=error.original)
