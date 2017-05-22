@@ -17,6 +17,20 @@ import sys
 from .errors import *
 from . import utils
 
+def when_mentioned(bot, message):
+    
+    return commands.when_mentioned(bot, message)
+
+class CustomHelpFormatter(discord.ext.commands.HelpFormatter):
+
+    def __init__(self, prefix, show_hidden=False, show_check_failure=False, width=80):
+        self.prefix = prefix
+        super().__init__(show_hidden, show_check_failure, width)
+
+    def get_ending_note(self):
+        command_name = self.context.invoked_with
+        return "Type {0}{1}{2} command for more info on a command.\n" \
+            "You can also type {0}{1}{2} category for more info on a category.".format(self.clean_prefix, self.prefix, command_name)
 
 class Bot(commands.AutoShardedBot):
 
@@ -33,7 +47,8 @@ class Bot(commands.AutoShardedBot):
             self.logger.warining("Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config 
-        super().__init__(command_prefix = commands.when_mentioned_or(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
+        super().__init__(command_prefix=when_mentioned, description = self.config['description'], pm_help = self.config['pm_help'], formatter=CustomHelpFormatter(self.config['prefix']))
+
 
     def makeLogger(self):
         ''' Make the logger for the bot
@@ -139,5 +154,15 @@ class Bot(commands.AutoShardedBot):
         ''' Make sure other bots can not trigger the bot
         '''
         
+        # Check the user is not a bot
         if not message.author.bot:
-            await self.process_commands(message)
+            
+            # Check if the bot was mentioned to start the command and remove it
+            if message.content.startswith(self.user.mention):
+                # Temp remove the mention so prefix can be checked
+                content = message.content.replace(self.user.mention, '').strip()
+                
+                if content[0] == self.config['prefix']:
+                    # Add the mention back with the extra prefix removed
+                    message.content = f'{self.user.mention} {content[1:]}'
+                    await self.process_commands(message)
