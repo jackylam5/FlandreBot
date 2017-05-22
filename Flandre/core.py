@@ -18,10 +18,14 @@ from .errors import *
 from . import utils
 
 def when_mentioned(bot, message):
+    ''' Used to make the prefix a mention 
+    '''    
     
     return commands.when_mentioned(bot, message)
 
 class CustomHelpFormatter(discord.ext.commands.HelpFormatter):
+    ''' Used to edit the help command to show the prefix needed as well as the mention
+    '''
 
     def __init__(self, prefix, show_hidden=False, show_check_failure=False, width=80):
         self.prefix = prefix
@@ -157,29 +161,44 @@ class Bot(commands.AutoShardedBot):
         # Check the user is not a bot
         if not message.author.bot:
             
-            # Check if the bot was mentioned to start the command and remove it
+            # Check if the bot was mentioned
             if message.content.startswith(self.user.mention):
                 # Temp remove the mention so prefix can be checked
                 content = message.content.replace(self.user.mention, '').strip()
                 
+                # Check it wasn't just a mention
                 if content != ''
+                    # Check if the first char is the prefix set in config
                     if content[0] == self.config['prefix']:
                         # Add the mention back with the extra prefix removed
                         message.content = f'{self.user.mention} {content[1:]}'
+                        # Process command
                         await self.process_commands(message)
 
     async def on_command_error(self, ctx, error):
-        """Deals with errors when a command is invoked."""
+        '''Deals with errors when a command is invoked.
+        '''
 
         if isinstance(error, commands.errors.CommandNotFound):
+            # Ignore No command found as we don't care if it wasn't one of our commands
             pass
+
         elif isinstance(error, commands.errors.MissingRequiredArgument):
+            # Tell the user they are missing a required argument
             await ctx.send(f'Argument `{error.param}` missing')
+
         elif isinstance(error, commands.errors.NoPrivateMessage):
+            # Tell the user the command can not be done in a private message
             await ctx.send('Command can\'t be used in a Private Message')
+
         elif isinstance(error, commands.errors.CheckFailure):
+            # Tell the user they do not have permission to use that command
             await ctx.send('You do not have permission to execute that command')
+
         elif isinstance(error, commands.errors.BadArgument):
+            # Tell the user there was a bad argument
             await ctx.send('Arguement error')
+
         else:
-        self.bot.logger.exception('Command "%s". Message "%s"', ctx.command, ctx.message.content, exc_info=error.original)
+            # Log any other errors
+            self.bot.logger.exception('Command "%s". Message "%s"', ctx.command, ctx.message.content, exc_info=error.original)
