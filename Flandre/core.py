@@ -167,7 +167,7 @@ class Bot(commands.AutoShardedBot):
                 content = message.content.replace(self.user.mention, '').strip()
                 
                 # Check it wasn't just a mention
-                if content != ''
+                if content != '':
                     # Check if the first char is the prefix set in config
                     if content[0] == self.config['prefix']:
                         # Add the mention back with the extra prefix removed

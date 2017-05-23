@@ -784,7 +784,7 @@ class music:
             vc = self.musicplayers[str(guild.id)]._vc
             channelmembers = vc.channel.members
             
-            # Do a check then wait 10 seconds if true
+            # Do a check then wait 5 seconds if true
             if len(channelmembers) == 1:
                 await asyncio.sleep(5)
                 
