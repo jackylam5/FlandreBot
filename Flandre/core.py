@@ -17,24 +17,17 @@ import sys
 from .errors import *
 from . import utils
 
-def when_mentioned(bot, message):
-    ''' Used to make the prefix a mention 
+def when_mentioned_with_prefix(prefix):
+    ''' Used to make the trigger for the bot a mention then a prefix you set
+        e.g. @bot !help 
     '''    
     
-    return commands.when_mentioned(bot, message)
+    def inner(bot, msg):
+        r = commands.when_mentioned(bot, msg)[0] + str(prefix)
+        print(r)
+        return r
 
-class CustomHelpFormatter(discord.ext.commands.HelpFormatter):
-    ''' Used to edit the help command to show the prefix needed as well as the mention
-    '''
-
-    def __init__(self, prefix, show_hidden=False, show_check_failure=False, width=80):
-        self.prefix = prefix
-        super().__init__(show_hidden, show_check_failure, width)
-
-    def get_ending_note(self):
-        command_name = self.context.invoked_with
-        return "Type {0}{1}{2} command for more info on a command.\n" \
-            "You can also type {0}{1}{2} category for more info on a category.".format(self.clean_prefix, self.prefix, command_name)
+    return inner
 
 class Bot(commands.AutoShardedBot):
 
@@ -51,7 +44,7 @@ class Bot(commands.AutoShardedBot):
             self.logger.warining("Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config 
-        super().__init__(command_prefix=when_mentioned, description = self.config['description'], pm_help = self.config['pm_help'], formatter=CustomHelpFormatter(self.config['prefix']))
+        super().__init__(command_prefix=when_mentioned_with_prefix(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
 
 
     def makeLogger(self):
@@ -159,21 +152,8 @@ class Bot(commands.AutoShardedBot):
         '''
         
         # Check the user is not a bot
-        if not message.author.bot:
-            
-            # Check if the bot was mentioned
-            if message.content.startswith(self.user.mention):
-                # Temp remove the mention so prefix can be checked
-                content = message.content.replace(self.user.mention, '').strip()
-                
-                # Check it wasn't just a mention
-                if content != '':
-                    # Check if the first char is the prefix set in config
-                    if content[0] == self.config['prefix']:
-                        # Add the mention back with the extra prefix removed
-                        message.content = f'{self.user.mention} {content[1:]}'
-                        # Process command
-                        await self.process_commands(message)
+        if not message.author.bot:        
+            await self.process_commands(message)
 
     async def on_command_error(self, ctx, error):
         '''Deals with errors when a command is invoked.
