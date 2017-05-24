@@ -11,6 +11,7 @@ from discord.ext import commands
 import logging
 from logging.handlers import RotatingFileHandler
 import json
+import datetime
 from os import listdir
 import sys
 # Import Flandre Errors
@@ -43,7 +44,7 @@ class Bot(commands.AutoShardedBot):
             self.logger.warining("Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config 
-        super().__init__(command_prefix=when_mentioned_with_prefix(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
+        super().__init__(command_prefix=when_mentioned_or(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
 
 
     def makeLogger(self):
@@ -114,6 +115,8 @@ class Bot(commands.AutoShardedBot):
         if self.shard_ids:
             shardnumber = len(self.shard_ids)
         self.logger.info(f'Logged in as: {self.user.name} ({self.user.id}) using {shardnumber} shards')
+        if not hasattr(self, 'uptime'):
+            self.uptime = datetime.datetime.utcnow()
         
         # Change the bots game to what is in the config
         await self.change_presence(game=discord.Game(name=self.config['game']))
@@ -180,4 +183,4 @@ class Bot(commands.AutoShardedBot):
 
         else:
             # Log any other errors
-            self.bot.logger.exception('Command "%s". Message "%s"', ctx.command, ctx.message.content, exc_info=error.original)
+            self.logger.exception('Command "%s". Message "%s"', ctx.command, ctx.message.content, exc_info=error.original)
