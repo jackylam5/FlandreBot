@@ -80,7 +80,7 @@ class Bot(commands.AutoShardedBot):
             print("\tReason: {0}".format(e))
             
             # Create new config file for user with defaults added in
-            tempconfig = {'token': '', 'prefix': '!', "ownerid": [], 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, "game": "scrub", 'dev_mode': False}
+            tempconfig = {'token': '', 'prefix': '!', "ownerid": [], 'description': "FlandreBot always a work in progress. Written by Jackylam5 and maware", 'pm_help': True, "game": "scrub", 'dev_mode': False, 'use_avconv': True}
             with open(f'{__package__}/config.json', 'w') as config:
                 json.dump(tempconfig, config, indent=4, sort_keys=True)
             
