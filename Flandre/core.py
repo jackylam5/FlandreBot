@@ -24,7 +24,6 @@ def when_mentioned_with_prefix(prefix):
     
     def inner(bot, msg):
         r = commands.when_mentioned(bot, msg)[0] + str(prefix)
-        print(r)
         return r
 
     return inner
