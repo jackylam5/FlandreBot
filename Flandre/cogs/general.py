@@ -118,7 +118,7 @@ class general:
         if search_terms:
             search = "http://api.urbandictionary.com/v0/define?term=" + quote(search_terms)
             
-            with aiohttp.ClientSession() as aioclient:
+            async with aiohttp.ClientSession() as aioclient:
                 async with aioclient.get(search) as resp:
                     status_code = resp.status
                     data = await resp.json()
