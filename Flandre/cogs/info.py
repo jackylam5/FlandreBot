@@ -3,6 +3,7 @@ from discord.ext import commands
 from youtube_dl import version
 import asyncio
 from .. import permissions
+import datetime
 
 class info:
 
@@ -18,9 +19,10 @@ class info:
         guild_count = len(self.bot.guilds)
         user_count = len(self.bot.users)
         voice_count = len(self.bot.voice_clients)
+        uptime = datetime.datetime.utcnow() - self.bot.uptime
         
         # Create the embed description and embed
-        desc = f'Shard Count: `{self.bot.shard_count}` Guilds: `{guild_count}` Users: `{user_count}`\nVoice Connections: `{voice_count}`'
+        desc = f'Shard Count: `{self.bot.shard_count}` Guilds: `{guild_count}` Users: `{user_count}`\nVoice Connections: `{voice_count}` Uptime: `{uptime}`'
         em = discord.Embed(type='rich', description=desc)
         em.set_author(name=f'{self.bot.user.name} Info')
         em.set_thumbnail(url=self.bot.user.avatar_url)
