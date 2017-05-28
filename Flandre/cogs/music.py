@@ -278,7 +278,7 @@ class MusicPlayer:
                                 self.bot.logger.warning(f"Video in {link}, could not be downloaded. Guild: {ctx.guild.name} ({ctx.guild.id})")
                     
                     else:
-                        await ctx.send(f'Sorry {ctx.auther.mention}, nothing was found from that')
+                        await ctx.send(f'Sorry {ctx.author.mention}, nothing was found from that')
 
                 # Start player is not already playing
                 if len(self.queue) != 0:
