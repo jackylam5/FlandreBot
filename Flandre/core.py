@@ -44,7 +44,7 @@ class Bot(commands.AutoShardedBot):
             self.logger.warining("Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config 
-        super().__init__(command_prefix=when_mentioned_or(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
+        super().__init__(command_prefix=commands.when_mentioned_or(self.config['prefix']), description = self.config['description'], pm_help = self.config['pm_help'])
 
 
     def makeLogger(self):
@@ -111,10 +111,7 @@ class Bot(commands.AutoShardedBot):
         '''
 
         # Tell user bot has logged in with how many shards
-        shardnumber = 1
-        if self.shard_ids:
-            shardnumber = len(self.shard_ids)
-        self.logger.info(f'Logged in as: {self.user.name} ({self.user.id}) using {shardnumber} shards')
+        self.logger.info(f'Logged in as: {self.user.name} ({self.user.id}) using {self.shard_count} shards')
         if not hasattr(self, 'uptime'):
             self.uptime = datetime.datetime.utcnow()
         
