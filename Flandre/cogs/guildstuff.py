@@ -41,7 +41,7 @@ class guildstuff:
     @permissions.checkAdmin()
     async def greetings(self, ctx):
         ''' Configures leaving and welcome messages 
-            It also congigures the channel they go in
+            It also configures the channel they go in
         '''
 
         if ctx.invoked_subcommand is None:
