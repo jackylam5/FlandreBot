@@ -154,7 +154,7 @@ class MusicPlayer:
             
             else:
                 # Disconnect was done by a user
-                await self.text_channel.send(f'Disconnected from the voice channel by {user.display_name}')
+                await self.text_channel.send(f'Disconnected from the voice channel by {user.mention}')
                 # Cancel the player task and tell cog this player can be removed
                 self.audio_player.cancel()
                 return True
@@ -216,65 +216,69 @@ class MusicPlayer:
                     func = functools.partial(ytdl.extract_info, link, download=False)
                     result = await self.bot.loop.run_in_executor(None, func)
 
-                    # Check if playlist was downloaded
-                    if 'entries' in result:
-                        queued = 0
-                        for song in result['entries']:  
-                            # Get song info
-                            if song is not None:
-                                self.queue.append(Song(ctx.author, song))
-                                queued += 1
-                            
-                            else:
-                                self.bot.logger.warning(f"Video in {link}, could not be downloaded. Guild: {ctx.guild.name} ({ctx.guild.id})")
+                    if result is not None:
+                        # Check if playlist was downloaded
+                        if 'entries' in result:
+                            queued = 0
+                            for song in result['entries']:  
+                                # Get song info
+                                if song is not None:
+                                    self.queue.append(Song(ctx.author, song))
+                                    queued += 1
+                                
+                                else:
+                                    self.bot.logger.warning(f"Video in {link}, could not be downloaded. Guild: {ctx.guild.name} ({ctx.guild.id})")
 
-                        # If search term added as search always returns as it was in a playlist
-                        if search:
-                            msg = ':notes: Queued: **{0}**'
-                            if self.paused_timeleft is not None:
-                                msg += ' Current song is *PAUSED*'
-                            
-                            if result['entries'] is None:
-                                await ctx.send(f"Video {link}, could not be downloaded")
+                            # If search term added as search always returns as it was in a playlist
+                            if search:
+                                msg = ':notes: Queued: **{0}**'
+                                if self.paused_timeleft is not None:
+                                    msg += ' Current song is *PAUSED*'
+                                
+                                if result['entries'] is None:
+                                    await ctx.send(f"Sorry {ctx.author.mention}, that could not be downloaded")
+                                
+                                else:
+                                    await ctx.send(msg.format(result['entries'][0]['title']))
                             
                             else:
-                                await ctx.send(msg.format(result['entries'][0]['title']))
+                                # Tell user how many songs were added
+                                if queued > 0:
+                                    msg = 'Queued: **{0}** songs [Songs in queue: {1}]'
+                                
+                                else:
+                                    msg = 'No songs were added'
+                                
+                                if self.paused_timeleft is not None:
+                                    msg += ' Current song is *PAUSED*'
+                                
+                                await ctx.send(msg.format(str(queued), len(self.queue)))
                         
                         else:
-                            # Tell user how many songs were added
-                            if queued > 0:
-                                msg = 'Queued: **{0}** songs [Songs in queue: {1}]'
+                            # Single song
+                            # Get song url, title and requester
+                            if result is not None:                    
+                                # Add song to queue
+                                self.queue.append(Song(ctx.author, result))
+                                
+                                # Tell the user the song has been queued
+                                msg = ':notes: Queued: **{0}** [Songs in queue: {1}]'
+                                if self.paused_timeleft is not None:
+                                    msg += ' Current song is *PAUSED*'
+                                
+                                await ctx.send(msg.format(result['title'], len(self.queue)))
                             
                             else:
-                                msg = 'No songs were added'
-                            
-                            if self.paused_timeleft is not None:
-                                msg += ' Current song is *PAUSED*'
-                            
-                            await ctx.send(msg.format(str(queued), len(self.queue)))
+                                # Tell the user if it couldn't be added
+                                msg = 'Could not add that link to queue'
+                                if self.paused_timeleft is not None:
+                                    msg += ' Current song is *PAUSED*'
+                                
+                                await ctx.send(msg)
+                                self.bot.logger.warning(f"Video in {link}, could not be downloaded. Guild: {ctx.guild.name} ({ctx.guild.id})")
                     
                     else:
-                        # Single song
-                        # Get song url, title and requester
-                        if result is not None:                    
-                            # Add song to queue
-                            self.queue.append(Song(ctx.author, result))
-                            
-                            # Tell the user the song has been queued
-                            msg = ':notes: Queued: **{0}** [Songs in queue: {1}]'
-                            if self.paused_timeleft is not None:
-                                msg += ' Current song is *PAUSED*'
-                            
-                            await ctx.send(msg.format(result['title'], len(self.queue)))
-                        
-                        else:
-                            # Tell the user if it couldn't be added
-                            msg = 'Could not add that link to queue'
-                            if self.paused_timeleft is not None:
-                                msg += ' Current song is *PAUSED*'
-                            
-                            await ctx.send(msg)
-                            self.bot.logger.warning(f"Video in {link}, could not be downloaded. Guild: {ctx.guild.name} ({ctx.guild.id})")
+                        await ctx.send(f'Sorry {ctx.auther.mention}, nothing was found from that')
 
                 # Start player is not already playing
                 if len(self.queue) != 0:
@@ -293,7 +297,7 @@ class MusicPlayer:
             if force:
                 self.skips.clear()
                 self._vc.stop()
-                await ctx.send(f'**{ctx.author.display_name}** has forced skipped the song')                
+                await ctx.send(f'{ctx.author.mention} has forced skipped the song')                
             
             else:
                 # Check user hasn't already skipped
@@ -305,11 +309,11 @@ class MusicPlayer:
                     if total_votes >= 3:
                         self.skips.clear()
                         self._vc.stop()
-                        await ctx.send(f'**{ctx.author.display_name}** has voted to skip.\nThe vote skip has passed.')
+                        await ctx.send(f'{ctx.author.mention} has voted to skip.\nThe vote skip has passed.')
                     
                     else:
                         # Tell user they have voted to skip and how many left is needed
-                        await ctx.send(f'**{ctx.author.display_name}** has voted to skip [{total_votes}/3].')
+                        await ctx.send(f'{ctx.author.mention} has voted to skip [{total_votes}/3].')
                 
                 else:
                     # Tell user they have already skipped
@@ -449,7 +453,7 @@ class MusicPlayer:
                 desc = f'[{self.current.title}]({self.current.url}) [{m:02d}:{s:02d}/{fm:02d}:{fs:02d}]'
             
             # Check for more songs
-            if len(self.queue) > 1:
+            if self.queue:
                 desc += '\nUp next:\n'
                 
                 # If there are 5 or lest song in queue only show them
