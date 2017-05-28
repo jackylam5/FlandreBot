@@ -32,6 +32,7 @@ class info:
         owner_string = ''
         for owner in self.bot.config['ownerid']:
             user = self.bot.get_user(owner)
+            owner_string += f'{user.name} ({user.mention}) '
         em.add_field(name='Owners:', value=owner_string)
 
         # Add github link
