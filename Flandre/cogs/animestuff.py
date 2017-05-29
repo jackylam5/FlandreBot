@@ -423,7 +423,7 @@ class animestuff:
             utils.saveCogConfig(self, 'notifications.json', self.notifications)
             
         else:
-            await self.bot.say("{0}, There isn't an anime with that ID airing, Did you copy the ID right?".format(ctx.author.mention))
+            await ctx.send("{0}, There isn't an anime with that ID airing, Did you copy the ID right?".format(ctx.author.mention))
 
     @anime.command()
     async def stop(self, ctx, anime_id : str):
@@ -444,15 +444,15 @@ class animestuff:
                 already_notify = False           
             
             if already_notify:
-                await self.bot.say("Okay {0}, I'll stop notifying you when {1} comes out!".format(ctx.author.mention, self.all_airing_ids[anime_id]))
+                await ctx.send("Okay {0}, I'll stop notifying you when {1} comes out!".format(ctx.author.mention, self.all_airing_ids[anime_id]))
             else:
-                await self.bot.say("{0}, I'll wasn't notifying you when {1} came out!".format(ctx.author.mention, self.all_airing_ids[anime_id]))
+                await ctx.send("{0}, I'll wasn't notifying you when {1} came out!".format(ctx.author.mention, self.all_airing_ids[anime_id]))
 
             # Save notifications.json
             utils.saveCogConfig(self, 'notifications.json', self.notifications)
 
         else:
-            await self.bot.say("{0}, There isn't an anime with that ID airing, Did you copy the ID right?".format(ctx.author.mention))
+            await ctx.send("{0}, There isn't an anime with that ID airing, Did you copy the ID right?".format(ctx.author.mention))
 
     @anime.command()
     async def airing(self, ctx):
