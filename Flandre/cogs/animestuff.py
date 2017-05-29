@@ -486,7 +486,7 @@ class animestuff:
         anime_id = None
 
         for aniID, aniTitle in self.all_airing_ids.items():
-            if aniTitle == title:
+            if aniTitle.lower() == title.lower():
                 anime_found = True
                 anime_id = aniID
                 break
