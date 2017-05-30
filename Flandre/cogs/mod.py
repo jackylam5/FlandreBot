@@ -697,7 +697,10 @@ class mod:
                         for word in self.filter[str(message.guild.id)]['server']:
                             reg = ''
                             for letter in word:
-                                reg += '{0}+[{1}]*'.format(letter, asciipunct)
+                                if letter == '.':
+                                    reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                else:
+                                    reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                             found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
@@ -711,7 +714,10 @@ class mod:
                                 for word in self.filter[str(message.guild.id)]['channels'][str(message.channel.id)]:
                                     reg = ''
                                     for letter in word:
-                                        reg += '{0}+[{1}]*'.format(letter, asciipunct)
+                                        if letter == '.':
+                                            reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                        else:
+                                            reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                     found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
@@ -737,7 +743,10 @@ class mod:
                         for word in self.filter[str(message.guild.id)]['server']:
                             reg = ''
                             for letter in word:
-                                reg += '{0}+[{1}]*'.format(letter, asciipunct)
+                                if letter == '.':
+                                    reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                else:
+                                    reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                             found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
@@ -751,7 +760,10 @@ class mod:
                                 for word in self.filter[str(message.guild.id)]['channels'][str(message.channel.id)]:
                                     reg = ''
                                     for letter in word:
-                                        reg += '{0}+[{1}]*'.format(letter, asciipunct)
+                                        if letter == '.':
+                                            reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                        else:
+                                            reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                     found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
