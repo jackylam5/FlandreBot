@@ -62,6 +62,38 @@ class info:
 
         await ctx.send(embed=em)
 
+    
+    @commands.command()
+    @commands.guild_only()
+    async def info(self, ctx):
+        ''' Get users Stats '''
+
+        embedcolour = discord.Colour(65535)
+        userembed = discord.Embed(type='rich', colour=embedcolour)
+        userembed.add_field(name='Name', value=ctx.author.name)
+        userembed.add_field(name='ID', value=ctx.author.id)
+
+        # Check for nickname
+        if ctx.author.nick is not None:
+            userembed.add_field(name='Nickname', value=ctx.author.nick)
+
+        userembed.add_field(name='Created', value=ctx.author.created_at)
+        userembed.add_field(name='Joined', value=ctx.author.joined_at)
+
+        # Check voice channel
+        if ctx.author.voice is not None:
+            userembed.add_field(name='Voice Channel', value=ctx.author.voice.channel.name)
+
+        # Get Users roles
+        roles = [role.name for role in ctx.author.roles if role.name != '@everyone']
+        if roles:
+            userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
+
+        # Set users avatar
+        userembed.set_thumbnail(url=ctx.author.avatar_url)
+
+        await ctx.send(embed=userembed)
+
     @commands.command()
     @permissions.checkOwners()
     async def guilds(self, ctx):  
