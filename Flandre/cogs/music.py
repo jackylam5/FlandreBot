@@ -231,7 +231,7 @@ class MusicPlayer:
 
                             # If search term added as search always returns as it was in a playlist
                             if search:
-                                msg = ':notes: Queued: **{0}**'
+                                msg = ':notes: Queued: `{0}` [Songs in queue: {1}]'
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
                                 
@@ -239,12 +239,12 @@ class MusicPlayer:
                                     await ctx.send(f"Sorry {ctx.author.mention}, that could not be downloaded")
                                 
                                 else:
-                                    await ctx.send(msg.format(result['entries'][0]['title']))
+                                    await ctx.send(msg.format(result['entries'][0]['title'].replace('`', "'"), len(self.queue)))
                             
                             else:
                                 # Tell user how many songs were added
                                 if queued > 0:
-                                    msg = 'Queued: **{0}** songs [Songs in queue: {1}]'
+                                    msg = 'Queued: `{0}` songs [Songs in queue: {1}]'
                                 
                                 else:
                                     msg = 'No songs were added'
@@ -262,11 +262,11 @@ class MusicPlayer:
                                 self.queue.append(Song(ctx.author, result))
                                 
                                 # Tell the user the song has been queued
-                                msg = ':notes: Queued: **{0}** [Songs in queue: {1}]'
+                                msg = ':notes: Queued: `{0}` [Songs in queue: {1}]'
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
                                 
-                                await ctx.send(msg.format(result['title'], len(self.queue)))
+                                await ctx.send(msg.format(result['title'].replace('`', "'"), len(self.queue)))
                             
                             else:
                                 # Tell the user if it couldn't be added
