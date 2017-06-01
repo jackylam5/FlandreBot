@@ -505,14 +505,17 @@ class MusicPlayer:
             
             # Send the now playing embed and start player
             await self.text_channel.send(embed=np)
+            await asyncio.sleep(1)
             
             # Start the player and wait until it is done 
             # Check if the user want to use avconv instead of ffmpeg
+            # Create the before args to stop the song from ending before the end
+            beforeArgs = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
             if self.bot.config['use_avconv']:
-                self._vc.play(discord.FFmpegPCMAudio(self.current.download_url, executable='avconv'), after=self.toggle_next)
+                self._vc.play(discord.FFmpegPCMAudio(self.current.download_url, executable='avconv', before_options=beforeArgs), after=self.toggle_next)
             
             else:
-                self._vc.play(discord.FFmpegPCMAudio(self.current.download_url), after=self.toggle_next)
+                self._vc.play(discord.FFmpegPCMAudio(self.current.download_url, before_options=beforeArgs), after=self.toggle_next)
             
             # Change the volume of the audio
             self._vc.source = discord.PCMVolumeTransformer(self._vc.source, volume=self.volume)

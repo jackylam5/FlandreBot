@@ -52,7 +52,8 @@ class info:
         voice_count = len(ctx.guild.voice_channels)
         role_count = len(ctx.guild.roles)
         # Create the embed description and embed
-        desc = f'Members: `{ctx.guild.member_count}` Text Channels: `{text_count}` Voice Channels: `{voice_count}`\nRoles: `{role_count}` Created on: `{ctx.guild.created_at}`'
+        created = ctx.guild.created_at.strftime('%x @ %X')
+        desc = f'Members: `{ctx.guild.member_count}` Text Channels: `{text_count}` Voice Channels: `{voice_count}`\nRoles: `{role_count}` Created on: `{created}`'
         em = discord.Embed(type='rich', description=desc)
         em.set_author(name=f'{ctx.guild.name} Info')
         em.set_thumbnail(url=ctx.guild.icon_url)
@@ -77,8 +78,8 @@ class info:
         if ctx.author.nick is not None:
             userembed.add_field(name='Nickname', value=ctx.author.nick)
 
-        userembed.add_field(name='Created', value=ctx.author.created_at)
-        userembed.add_field(name='Joined', value=ctx.author.joined_at)
+        userembed.add_field(name='Created', value=ctx.author.created_at.strftime('%x @ %X'))
+        userembed.add_field(name='Joined', value=ctx.author.joined_at.strftime('%x @ %X'))
 
         # Check voice channel
         if ctx.author.voice is not None:
@@ -103,8 +104,12 @@ class info:
         
         msg = '```'
         # Display all guilds with id
-        for guild in self.bot.guilds:
-            msg += f'{guild.name} ({guild.id})\n'
+        for guild in self.bot.guilds:            
+
+            if guild.voice_client is not None:
+                msg += f'{guild.name} ({guild.id}) VOICE: ({guild.voice_client.channel.name}\n'
+            else:
+                msg += f'{guild.name} ({guild.id})\n'
 
             if len(msg) > 1500:
                 msg += '```'
