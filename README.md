@@ -10,3 +10,8 @@ Always a WIP
     - [youtube-dl](https://rg3.github.io/youtube-dl/)
 - Animestuff cog
     - [dateutil](https://pypi.python.org/pypi/python-dateutil/2.6.0)
+
+## TODO
+    - [ ] Make code conform to `PEP8`
+    - [ ] Finish Animestuff Cog
+    - [ ] Make osu! Cog
