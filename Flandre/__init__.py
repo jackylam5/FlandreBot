@@ -1,2 +1,2 @@
 from .core import Bot
-from .errors import *
+from .errors import MissingConfigFile, LoginError
