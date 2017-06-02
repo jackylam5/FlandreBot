@@ -175,8 +175,8 @@ async def send_cmd_help(bot, ctx):
     ''' Make the formatting for command groups from context '''
     if ctx.invoked_subcommand:
         pages = await bot.formatter.format_help_for(ctx, ctx.invoked_subcommand)
-        return pages
 
     else:
         pages = await bot.formatter.format_help_for(ctx, ctx.command)
-        return pages
+    
+    return pages

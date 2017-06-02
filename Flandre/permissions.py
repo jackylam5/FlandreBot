@@ -15,10 +15,7 @@ def check_owner_perm(ctx):
     except:
         return False
     else:
-        if ctx.author.id in config['ownerid']:
-            return True
-        else:
-            return False
+        return ctx.author.id in config['ownerid']
 
 def check_admin_perm(ctx):
     '''Used to check is user has the manage_guild permission'''
@@ -42,12 +39,9 @@ def check_admin():
     ''' Check if user is admin or higher '''
     def checkperm(ctx):
         ''' Check the different perms '''
-        if check_owner_perm(ctx):
+        if check_owner_perm(ctx) or check_admin_perm(ctx):
             return True
-        elif check_admin_perm(ctx):
-            return True
-        else:
-            return False
+        return False
 
     return commands.check(checkperm)
 
@@ -55,13 +49,8 @@ def check_mod():
     ''' Check if user is admin or higher '''
     def checkperm(ctx):
         ''' Check the different perms '''
-        if check_owner_perm(ctx):
+        if check_owner_perm(ctx) or check_admin_perm(ctx) or check_mod_perm(ctx):
             return True
-        elif check_admin_perm(ctx):
-            return True
-        elif check_mod_perm(ctx):
-            return True
-        else:
-            return False
+        return False
 
     return commands.check(checkperm)
