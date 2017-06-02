@@ -84,9 +84,9 @@ class general:
         
         if question[-1].endswith('?') and not question[0].startswith('?'):
             answer = choice(answers)
-            await self.bot.say(f"{ctx.author.mention}, {answer}")
+            await ctx.send(f"{ctx.author.mention}, {answer}")
         else:
-            await self.bot.say(f"{ctx.author.mention}, Please ask a question")
+            await ctx.send(f"{ctx.author.mention}, Please ask a question")
 
     @commands.command()
     async def choose(self, ctx, *choices):
@@ -107,7 +107,11 @@ class general:
         
         if text:
             text = quote(text)
-            await ctx.send(f"http://lmgtfy.com/?q={text}")
+            url= f"http://lmgtfy.com/?q={text}"
+
+            if len(url) > 1999:
+                url = url[:1999]
+            await ctx.send(url)
         else:
             await ctx.send(f"{ctx.author.mention}, Please include search term")
 
