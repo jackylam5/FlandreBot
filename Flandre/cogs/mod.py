@@ -92,18 +92,18 @@ class mod:
     @commands.command()
     @commands.guild_only()
     @permissions.checkAdmin()
-    async def ban(self, ctx, user : discord.User, reason : str = "", days : int = 0):
-        ''' Bans the user mentioned with reason, number of days to delete message comes after
+    async def ban(self, ctx, user : discord.User, *, reason : str = ""):
+        ''' Bans the user mentioned with reason, will remove 1 day worth of messages 
             If server has log channel it is logged
         '''
 
         try:
             if reason == '':
-                await ctx.guild.ban(user, delete_message_days=days)
+                await ctx.guild.ban(user, delete_message_days=1)
                 await ctx.send("Done. User banned")
             else:
                 reason = self.cleanReason(reason)
-                await ctx.guild.ban(user, reason=reason, delete_message_days=days)
+                await ctx.guild.ban(user, reason=reason, delete_message_days=1)
                 await ctx.send(f"Done. User banned for reason: `{reason}`")
 
         except discord.errors.Forbidden:
