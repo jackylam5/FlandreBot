@@ -264,8 +264,7 @@ class Animestuff:
                 mal_data = await self.get_mal_anime_info(anime['title_romaji'])
 
                 # Create embed
-                desc = (f'Episode **{anime[airing][next_episode]}** of '
-                        f'**{anime[title_romaji]} ({anime[type]})**')
+                desc = 'Episode **{0[airing][next_episode]}** of **{0[title_romaji]} ({0[type]})**'.format(anime)
 
                 timestamp = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
                 embed = discord.Embed(type='rich',
