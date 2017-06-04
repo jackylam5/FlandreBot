@@ -1,7 +1,6 @@
 ''' Holds all anime stuff for bot '''
 import asyncio
 import datetime
-import json
 import xml.etree.ElementTree as et
 
 import aiohttp
@@ -158,8 +157,7 @@ class Animestuff:
 
             # Save notifications.json
             utils.save_cog_config(self, 'notifications.json', self.notifications)
-            anime_len = len(animes)
-            log_msg = (f"Found {anime_len} currently airing anime. "
+            log_msg = (f"Found {len(animes)} currently airing anime. "
                        f"Removed {removed_counter} no longer airing anime from notification file")
 
             self.bot.logger.info(log_msg)
@@ -199,7 +197,8 @@ class Animestuff:
                     total_ep = int(anime['total_episodes'])
                     if total_ep == 0:
                         total_ep = '-'
-                    desc += ('[ID: {0[id]}] {0[title_romaji]} [{0[airing][next_episode]}/{1}]\n'.format(anime, total_ep))
+                    desc += (f'[ID: {anime["id"]}] {anime["title_romaji"]} '
+                             f'[{anime["airing"]["next_episode"]}/{total_ep}]\n')
 
                 timestamp = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
                 embed = discord.Embed(type='rich',
@@ -264,7 +263,8 @@ class Animestuff:
                 mal_data = await self.get_mal_anime_info(anime['title_romaji'])
 
                 # Create embed
-                desc = 'Episode **{0[airing][next_episode]}** of **{0[title_romaji]} ({0[type]})**'.format(anime)
+                desc = (f'Episode **{anime["airing"]["next_episode"]}** of '
+                        f'**{anime["title_romaji"]} ({anime["type"]})**')
 
                 timestamp = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
                 embed = discord.Embed(type='rich',
@@ -285,7 +285,8 @@ class Animestuff:
                     links += ' [MAL](https://myanimelist.net/anime/{0})'.format(mal_data[0]['id'])
                 embed.add_field(name='Links:', value=links)
 
-                dm_msg = 'Type **@{0 anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, anime)
+                dm_msg = (f'Type **@{self.bot.user.name} anime notify '
+                          f'{anime["id"]}** to get DM notifications for this anime')
 
                 embed.add_field(name='DM Notification:', value=dm_msg)
                 embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
@@ -346,13 +347,17 @@ class Animestuff:
                 for i, anime in enumerate(airing_soon):
                     countdown = (parse(anime['airing']['time']) -
                                  datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))))
+                    countdown = str(countdown).split('.')[0]
 
                     # Tidy up if unknown eps
                     total_ep = int(anime['total_episodes'])
                     if total_ep == 0:
                         total_ep = '-'
-                    desc += '{0}: [{1[title_romaji]}](https://anilist.co/anime/{1[id]})'.format(str(i+1), anime)
-                    desc += '({0[type]}) [{0[airing][next_episode]}/{1}] in {2}\n'.format(anime, total_ep, str(countdown).split('.')[0])
+                    desc += (
+                        f'{i+1}: [{anime["title_romaji"]}](https://anilist.co/anime/{anime["id"]})'
+                        f'({anime["type"]}) [{anime["airing"]["next_episode"]}/{total_ep}] '
+                        f'in {countdown}\n'
+                        )
 
                 # Create embed
                 timestamp = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
@@ -445,10 +450,12 @@ class Animestuff:
 
         # Check if english title is different from romaji title
         if next_airing['title_english'] != next_airing['title_romaji']:
-            title = '{0[title_romaji]} ({0[type]})\nKnown as **{0[title_english]}**'.format(next_airing)
+            title = (f'{next_airing["title_romaji"]} ({next_airing["type"]})\n'
+                     f'Known as **{next_airing["title_english"]}**')
+
             anime_embed.add_field(name='Title', value=title, inline=False)
         else:
-            title = '{0[title_romaji]} ({0[type]})'.format(next_airing)
+            title = f'{next_airing["title_romaji"]} ({next_airing["type"]})'
             anime_embed.add_field(name='Title', value=title, inline=False)
 
         anime_embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
@@ -456,13 +463,16 @@ class Animestuff:
         # Get airing time
         countdown = (parse(next_airing['airing']['time']) -
                      datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))))
+        countdown = str(countdown).split('.')[0]
 
         # Tidy up if unknown eps
         total_ep = int(next_airing['total_episodes'])
         if total_ep == 0:
             total_ep = '-'
 
-        ep_info = '#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2}**'.format(next_airing, total_ep, str(countdown).split('.')[0])
+        ep_info = (f'#**{next_airing["airing"]["next_episode"]}**/**{total_ep}**'
+                   f'\nAirs in: **{countdown}**')
+
         anime_embed.add_field(name='Episode', value=ep_info, inline=False)
 
         # Add links to embed
@@ -473,7 +483,8 @@ class Animestuff:
             links += ' [Crunchyroll]({0})'.format(cr_link)
         anime_embed.add_field(name='Links:', value=links)
 
-        dm_msg = 'Type **@{0} anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, next_airing['id'])
+        dm_msg = (f'Type **@{self.bot.user.name} anime notify {next_airing["id"]}** '
+                  'to get DM notifications for this anime')
 
         anime_embed.add_field(name='DM Notification:', value=dm_msg)
 
@@ -497,10 +508,12 @@ class Animestuff:
 
             anime = self.all_airing_ids[anime_id]
             if already_notify:
-                await ctx.send(f"{ctx.author.mention}, I'm already notifying you when {anime} comes out!")
+                await ctx.send((f"{ctx.author.mention}, "
+                                f"I'm already notifying you when {anime} comes out!"))
 
             else:
-                await ctx.send(f"Okay {ctx.author.mention}, I'll notify you when {anime} comes out!")
+                await ctx.send((f"Okay {ctx.author.mention}, "
+                                f"I'll notify you when {anime} comes out!"))
 
             # Save notifications.json
             utils.save_cog_config(self, 'notifications.json', self.notifications)
@@ -528,9 +541,12 @@ class Animestuff:
 
             anime = self.all_airing_ids[anime_id]
             if already_notify:
-                await ctx.send(f"Okay {ctx.author.mention}, I'll stop notifying you when {anime} comes out!")
+                await ctx.send((f"Okay {ctx.author.mention}, "
+                                f"I'll stop notifying you when {anime} comes out!"))
+
             else:
-                await ctx.send(f"{ctx.author.mention}, I'll wasn't notifying you when {anime} came out!")
+                await ctx.send((f"{ctx.author.mention}, "
+                                f"I'll wasn't notifying you when {anime} came out!"))
 
             # Save notifications.json
             utils.save_cog_config(self, 'notifications.json', self.notifications)
@@ -550,9 +566,12 @@ class Animestuff:
             if total_ep == 0:
                 total_ep = '-'
             if anime['airing']['countdown'] is None:
-                desc += '[ID: {0[id]}] {0[title_romaji]} [{0[airing][next_episode]}/{1}] - AIRED\n'.format(anime, total_ep)
+                desc += (f'[ID: {anime["id"]}] {anime["title_romaji"]} '
+                         f'[{anime["airing"]["next_episode"]}/{total_ep}] - AIRED\n')
+
             else:
-                desc += '[ID: {0[id]}] {0[title_romaji]} [{0[airing][next_episode]}/{1}]\n'.format(anime, total_ep)
+                desc += (f'[ID: {anime["id"]}] {anime["title_romaji"]} '
+                         f'[{anime["airing"]["next_episode"]}/{total_ep}]')
 
         timestamp = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
         embed = discord.Embed(type='rich',
@@ -599,24 +618,29 @@ class Animestuff:
 
             # Check if english title is different from romaji title
             if anime_info['title_english'] != anime_info['title_romaji']:
-                title = '{0[title_romaji]} ({0[type]})\nKnown as **{0[title_english]}**'.format(anime_info)
+                title = (f'{anime_info["title_romaji"]} ({anime_info["type"]})\n'
+                         f'Known as **{anime_info["title_english"]}**')
+
                 anime_embed.add_field(name='Title', value=title, inline=False)
 
             else:
-                title = '{0[title_romaji]} ({0[type]})'.format(anime_info)
+                title = f'{anime_info["title_romaji"]} ({anime_info["type"]})'
                 anime_embed.add_field(name='Title', value=title, inline=False)
 
             anime_embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
             # Get airing time
             countdown = (parse(anime_info['airing']['time']) -
                          datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))))
+            countdown = str(countdown).split('.')[0]
 
             # Tidy up if unknown eps
             total_ep = int(anime_info['total_episodes'])
             if total_ep == 0:
                 total_ep = '-'
 
-            ep_info = '#**{0[airing][next_episode]}**/**{1}**\nAirs in: **{2}**'.format(anime_info, total_ep, str(countdown).split('.')[0])
+            ep_info = (f'#**{anime_info["airing"]["next_episode"]}**/**{total_ep}**\n'
+                       f'Airs in: **{countdown}**')
+
             anime_embed.add_field(name='Episode', value=ep_info, inline=False)
 
             # Add links to embed
@@ -627,12 +651,13 @@ class Animestuff:
                 links += ' [Crunchyroll]({0})'.format(cr_link)
             anime_embed.add_field(name='Links:', value=links)
 
-            dm_msg = 'Type **@{0} anime notify {1}** to get DM notifications for this anime'.format(self.bot.user.name, anime_info['id'])
+            dm_msg = (f'Type **@{self.bot.user.name} anime notify {anime_info["id"]}** '
+                      'to get DM notifications for this anime')
 
             anime_embed.add_field(name='DM Notification:', value=dm_msg)
 
             await ctx.send(embed=anime_embed)
-        
+
         else:
             await ctx.send((f"{ctx.author.mention}, "
                             "I couldn't find that anime. "
