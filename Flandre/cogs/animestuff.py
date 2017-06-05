@@ -15,6 +15,43 @@ DEFAULT = {"anilist": {"clientID": "", "clientSecret": ""},
            "mal": {"username": "", "password": ""}
           }
 ANILIST_ICON = 'https://anilist.co/img/logo_al.png'
+MAL_ICON = 'https://myanimelist.cdn-dena.com/images/faviconv5.ico'
+
+def clean_synopsis(synopsis):
+    '''
+    Cleans a synopsis to replace certain characters
+    And format for markdown
+    '''
+
+    # Remove <br /> so it prints just a new line
+    synopsis = synopsis.replace('<br />', '')
+
+    # Convert html formating with correct characters
+    synopsis = synopsis.replace('&mdash;', '—')
+    synopsis = synopsis.replace('&ndash;', '-')
+    synopsis = synopsis.replace('&sect;', '§')
+    synopsis = synopsis.replace('&ldquo;', '"')
+    synopsis = synopsis.replace('&rdquo;', '"')
+    synopsis = synopsis.replace('&#039;', "'")
+
+    # Replace Bold/Strong with markdown
+    synopsis = synopsis.replace('[b]', "**")
+    synopsis = synopsis.replace('[/b]', "**")
+
+    # Replace italic/em with markdown
+    synopsis = synopsis.replace('[i]', "*")
+    synopsis = synopsis.replace('[/i]', "*")
+
+    # Replace Strikethrough with markdown
+    synopsis = synopsis.replace('[s]', "~~")
+    synopsis = synopsis.replace('[/s]', "~~")
+
+    # Replace Underline with markdown
+    synopsis = synopsis.replace('[u]', "__")
+    synopsis = synopsis.replace('[/u]', "__")
+
+
+    return synopsis
 
 class Animestuff:
     '''
@@ -662,6 +699,39 @@ class Animestuff:
             await ctx.send((f"{ctx.author.mention}, "
                             "I couldn't find that anime. "
                             "Make sure you are using the romaji title for this command please"))
+
+    @anime.command()
+    async def search(self, ctx, *, anime: str):
+        ''' Get info about an anime from MAL '''
+
+        mal_info = await self.get_mal_anime_info(anime)
+
+        if mal_info:
+            anime = mal_info[0]
+
+            # Clean the synopsis then create the embed
+            desc = clean_synopsis(anime['synopsis'])
+            title = f'{anime["title"]} ({anime["type"]})'
+            url = f'https://myanimelist.net/anime/{anime["id"]}'
+            anime_embed = discord.Embed(type='rich',
+                                        colour=10057145,
+                                        description=desc,
+                                        title=title,
+                                        url=url)
+
+            anime_embed.add_field(name='Status', value=anime['status'])
+            anime_embed.add_field(name='Episodes', value=anime['episodes'])
+            anime_embed.add_field(name='Start Date', value=anime['start_date'])
+            anime_embed.add_field(name='End Date', value=anime['end_date'])
+
+            # Set embed image and MAL image
+            anime_embed.set_thumbnail(url=anime['image'])
+            anime_embed.set_footer(text='Info from MAL', icon_url=MAL_ICON)
+
+            await ctx.send(embed=anime_embed)
+
+        else:
+            await ctx.send("I couldn't find anything from MAL with that search")
 
 def setup(bot):
     ''' Add cog to bot '''
