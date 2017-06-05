@@ -32,6 +32,7 @@ def clean_synopsis(synopsis):
     synopsis = synopsis.replace('&sect;', '§')
     synopsis = synopsis.replace('&ldquo;', '"')
     synopsis = synopsis.replace('&rdquo;', '"')
+    synopsis = synopsis.replace('&quot;', '"')
     synopsis = synopsis.replace('&#039;', "'")
 
     # Replace Bold/Strong with markdown
