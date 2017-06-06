@@ -12,6 +12,6 @@ Always a WIP
     - [dateutil](https://pypi.python.org/pypi/python-dateutil/2.6.0)
 
 ## TODO
-    - [ ] Make code conform to `PEP8`
-    - [ ] Finish Animestuff Cog
+    - [x] Make code conform to `PEP8`
+    - [x] Finish Animestuff Cog
     - [ ] Make osu! Cog
