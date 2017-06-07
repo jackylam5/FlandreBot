@@ -712,8 +712,13 @@ class Animestuff:
 
             # Clean the synopsis then create the embed
             desc = clean_synopsis(anime['synopsis'])
+            # Check if desc has more than one paragraph if so tell user to click title for more
+            if '\n' in desc:
+                desc = desc.split("\n")[0] + ' **... (Click title for more)**'
+
             title = f'{anime["title"]} ({anime["type"]})'
             url = f'https://myanimelist.net/anime/{anime["id"]}'
+
             anime_embed = discord.Embed(type='rich',
                                         colour=10057145,
                                         description=desc,
