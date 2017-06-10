@@ -1,5 +1,7 @@
 ''' Hold the moderation cog for the mod '''
 import asyncio
+import logging
+from io import StringIO, BytesIO
 import re
 from string import punctuation as asciipunct
 
@@ -17,6 +19,7 @@ class Mod:
         self.message_channels = utils.check_cog_config(self, 'message_channels.json')
         self.filter = utils.check_cog_config(self, 'filter.json')
         self.filtered_message = False
+        self.ban_logger = None
 
     def __unload(self):
         ''' Remove listeners '''
@@ -40,6 +43,44 @@ class Mod:
             reason = reason.replace(match[0], f'@{user.name}#{user.discriminator}')
 
         return reason
+
+    async def ban_log(self, user_name, guild_id):
+        ''' Used to make a ban logger to send a file to the log channel when someone is banned '''
+        # Set up the ban log
+        stream = StringIO()
+        handler = logging.StreamHandler(stream)
+        fmt_msg = '%(asctime)s - %(name)s > %(message)s'
+        formatter = logging.Formatter(fmt_msg)
+        handler.setFormatter(formatter)
+        self.ban_logger = logging.getLogger(user_name)
+        self.ban_logger.setLevel(logging.INFO)
+        self.ban_logger.addHandler(handler)
+
+        # We will wait 1 min incase ban adding takes a while
+        await asyncio.sleep(5)
+
+        # Close logger
+        handler.flush()
+        stream.flush()
+        self.ban_logger.removeHandler(handler)
+        self.ban_logger = None
+
+        # Log in the clean up in log_channel if set up
+        send_message = False
+        log_channel = None
+        if str(guild_id) in self.message_channels:
+            send_message = True
+            log_channel = self.bot.get_channel(self.message_channels[str(guild_id)])
+        elif str(guild_id) in self.logging_channels:
+            send_message = True
+            log_channel = self.bot.get_channel(self.logging_channels[str(guild_id)])
+
+        logfile = BytesIO(bytes(stream.getvalue(), 'utf-8'))
+        stream.close()
+        if send_message:
+            await log_channel.send(f"Log for ban of {user_name}",
+                                   file=discord.File(logfile, filename=f"{user_name}_ban.log"))
+            logfile.close()
 
     @commands.command()
     @commands.guild_only()
@@ -134,6 +175,8 @@ class Mod:
                 await ctx.guild.ban(user, reason=reason, delete_message_days=1)
                 await ctx.send(f"Done. User banned for reason: `{reason}`")
 
+            task = asyncio.ensure_future(self.ban_log(user.name, ctx.guild.id))
+
         except discord.errors.Forbidden:
             await ctx.send("Can't do that user has higher role than me")
 
@@ -149,6 +192,8 @@ class Mod:
                 if reason != '':
                     embed.add_field(name='Reason:', value=f'```{reason}```')
                 await log_channel.send(embed=embed)
+
+            await task
 
     @commands.command()
     @commands.guild_only()
@@ -215,6 +260,8 @@ class Mod:
                 await ctx.guild.unban(user, reason=reason)
                 await ctx.send(f"Done. User softbanned for reason: `{reason}`")
 
+            task = asyncio.ensure_future(self.ban_log(user.name, ctx.guild.id))
+
         except discord.errors.Forbidden:
             await ctx.send("Can't do that user has higher role than me")
 
@@ -230,6 +277,8 @@ class Mod:
                 if reason != '':
                     embed.add_field(name='Reason:', value=f'```{reason}```')
                 await log_channel.send(embed=embed)
+
+            await task
 
     @commands.command()
     @commands.guild_only()
@@ -320,7 +369,7 @@ class Mod:
             elif str(ctx.guild.id) in self.logging_channels:
                 send_message = True
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
-            
+
             if send_message:
                 desc = (f'{ctx.author.mention} has cleaned up **{deleted}** messages containing '
                         f'**{text}** in {ctx.channel.mention}')
@@ -805,7 +854,7 @@ class Mod:
 
         if message.author.bot and message.author != self.bot.user:
             return False
-        
+
         else:
             # Check if bot owner
             if message.author.id in self.bot.config['ownerid']:
@@ -879,6 +928,7 @@ class Mod:
                                     # If re found the word delete it and tell the user
                                     if found is not None:
                                         await message.delete()
+                                        self.filtered_message = True
                                         msg = self.filter[guild_id]['message']
                                         if msg is not None:
                                             msg = msg.replace('%user%', author.mention)
@@ -925,6 +975,7 @@ class Mod:
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 await after.delete()
+                                self.filtered_message = True
                                 msg = self.filter[guild_id]['message']
                                 if msg is not None:
                                     await after.channel.send(msg.replace('%user%', author.mention))
@@ -953,33 +1004,40 @@ class Mod:
     async def post_deleted_message(self, message):
         ''' Post when a message is deleted to the log channel '''
 
+        # We need to wait incase the ban log is made
+        await asyncio.sleep(1)
+
         # Check message is not a DM
         if isinstance(message.channel, discord.abc.GuildChannel):
             if message.author != self.bot.user:
-                # Log in the deleteion in log_channel if set up
-                send_message = False
-                log_channel = None
-                if str(message.guild.id) in self.message_channels:
-                    send_message = True
-                    log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
-                elif str(message.guild.id) in self.logging_channels:
-                    send_message = True
-                    log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
+              
+                if self.ban_logger is None:
+                    # Log in the deleteion in log_channel if set up
+                    send_message = False
+                    log_channel = None
+                    if str(message.guild.id) in self.message_channels:
+                        send_message = True
+                        log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
+                    elif str(message.guild.id) in self.logging_channels:
+                        send_message = True
+                        log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
 
-                if send_message:
-                    if self.filtered_message:
-                        desc = (f'Message from {message.author.display_name} was deleted '
-                                f'from {message.channel.mention} due to filter')
-                        self.filtered_message = False
-                    else:
-                        desc = (f'Message from {message.author.display_name} was deleted '
-                                f'from {message.channel.mention}')
+                    if send_message:
+                        if self.filtered_message:
+                            desc = (f'Message from {message.author.display_name} was deleted '
+                                    f'from {message.channel.mention} due to filter')
+                            self.filtered_message = False
+                        else:
+                            desc = (f'Message from {message.author.display_name} was deleted '
+                                    f'from {message.channel.mention}')
 
-                    embed = discord.Embed(type='rich', description=desc)
-                    if message.clean_content:
-                        embed.add_field(name='Content:', value=message.clean_content)
-                    embed.set_footer(text='Done at {0}'.format(message.created_at.strftime('%c')))
-                    await log_channel.send(embed=embed)
+                        embed = discord.Embed(type='rich', description=desc)
+                        if message.clean_content:
+                            embed.add_field(name='Content:', value=message.clean_content)
+                        embed.set_footer(text='Done at {0}'.format(message.created_at.strftime('%c')))
+                        await log_channel.send(embed=embed)
+                else:
+                    self.ban_logger.info(message.clean_content)
 
 def setup(bot):
     ''' Setup for bot to add cog '''
