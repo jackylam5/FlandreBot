@@ -755,15 +755,21 @@ class Mod:
     def filter_immune(self, message):
         ''' Check if user can not be filtered '''
 
-        # Check if bot owner
-        if message.author.id in self.bot.config['ownerid']:
-            return True
-        elif message.channel.permissions_for(message.author).manage_messages:
-            # Admin in server
-            return True
-        elif message.channel.permissions_for(message.author).manage_channels:
-            # Mod in server
-            return True
+        if message.author.bot and message.author != self.bot.user:
+            return False
+        
+        else:
+            # Check if bot owner
+            if message.author.id in self.bot.config['ownerid']:
+                return True
+            elif message.channel.permissions_for(message.author).manage_messages:
+                # Admin in server
+                return True
+            elif message.channel.permissions_for(message.author).manage_channels:
+                # Mod in server
+                return True
+            else:
+                return False
 
     async def check_filter(self, message):
         ''' Check if the message contains a filtered word from a server '''
@@ -776,6 +782,18 @@ class Mod:
                 if str(message.guild.id) in self.filter:
                     # Check user is not immune from filter
                     if not self.filter_immune(message):
+
+                        # Filter out embed content
+                        if message.embeds:
+                            for embed in message.embeds:
+                                embed_dict = embed.to_dict()
+                                message.content += '{}\n'.format(embed_dict.get('description', ''))
+                                message.content += '{}\n'.format(embed_dict.get('title', ''))
+
+                                if 'fields' in embed_dict:
+                                    for field in embed_dict['fields']:
+                                        message.content += '{}\n'.format(field.get('name', ''))
+                                        message.content += '{}\n'.format(field.get('value', ''))                                        
 
                         guild_id = str(message.guild.id)
                         channel_id = str(message.channel.id)
@@ -829,6 +847,18 @@ class Mod:
                 if str(after.guild.id) in self.filter:
                     # Check user is not immune from filter
                     if not self.filter_immune(after):
+
+                        # Filter out embed content
+                        if after.embeds:
+                            for embed in after.embeds:
+                                embed_dict = embed
+                                after.content += '{}\n'.format(embed_dict.get('description', ''))
+                                after.content += '{}\n'.format(embed_dict.get('title', ''))
+
+                                if 'fields' in embed_dict:
+                                    for field in embed_dict['fields']:
+                                        after.content += '{}\n'.format(field.get('name', ''))
+                                        after.content += '{}\n'.format(field.get('value', ''))
 
                         guild_id = str(after.guild.id)
                         channel_id = str(after.channel.id)
