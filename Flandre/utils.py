@@ -48,7 +48,7 @@ class Cogdisable:
 
                     else:
                         data[str(ctx.guild.id)].append(cog_name.title())
-                        
+
                         # Clear the file before saving
                         file.seek(0)
                         file.truncate()
@@ -97,7 +97,6 @@ class Cogdisable:
 
     @commands.command()
     @commands.guild_only()
-    @permissions.check_admin()
     async def listcogs(self, ctx):
         '''
         Lists the cogs showing what ones are disabled for the guild
