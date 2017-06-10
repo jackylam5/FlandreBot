@@ -133,14 +133,14 @@ class Bot(commands.AutoShardedBot):
         # Change the bots game to what is in the config
         await self.change_presence(game=discord.Game(name=self.config['game']))
 
+        # Check for data and cog foders
+        utils.check_core_folders(self.logger)
+
         # Load the owner reloader and Cogdisable
         self.add_cog(utils.Reloader(self))
         self.logger.info('Loaded cog: Reloader')
         self.add_cog(utils.Cogdisable(self))
         self.logger.info('Loaded cog: Cogdisable')
-
-        # Check for data and cog foders
-        utils.check_core_folders(self.logger)
 
         # Load cogs
         files = [file.replace('.py', '') for file in listdir(f'{__package__}/cogs')
