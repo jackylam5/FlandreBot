@@ -620,6 +620,9 @@ class Music:
             asyncio.ensure_future(player.disconnect(self.bot.user, force=True, reloaded=True))
             self.bot.logger.info(f'Forcefully deleted {guild} music player')
             del self.musicplayers[guild]
+    
+    async def __local_check(self, ctx):
+        return utils.check_enabled(ctx)
 
     @commands.command()
     @commands.guild_only()

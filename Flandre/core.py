@@ -133,9 +133,11 @@ class Bot(commands.AutoShardedBot):
         # Change the bots game to what is in the config
         await self.change_presence(game=discord.Game(name=self.config['game']))
 
-        # Load the owner reloader
+        # Load the owner reloader and Cogdisable
         self.add_cog(utils.Reloader(self))
-        self.logger.info('Loaded cog: reloader')
+        self.logger.info('Loaded cog: Reloader')
+        self.add_cog(utils.Cogdisable(self))
+        self.logger.info('Loaded cog: Cogdisable')
 
         # Check for data and cog foders
         utils.check_core_folders(self.logger)
@@ -190,7 +192,8 @@ class Bot(commands.AutoShardedBot):
 
         elif isinstance(error, commands.errors.CheckFailure):
             # Tell the user they do not have permission to use that command
-            await ctx.send('You do not have permission to execute that command')
+            await ctx.send(('You are not able to run this command '
+                            'due to your permissions or the cog being disabled'))
 
         elif isinstance(error, commands.errors.BadArgument):
             # Tell the user there was a bad argument

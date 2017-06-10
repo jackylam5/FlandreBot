@@ -4,16 +4,138 @@ Holds the reloading cog and the function to save stuff to the data folder for co
 
 import json
 from os import mkdir
-from os.path import isdir
+from os.path import isdir, isfile
 
+import discord
 from discord.ext import commands
 
 from . import permissions
 
 
+class Cogdisable:
+    ''' Allows guilds to disable certain cogs '''
+
+    def __init__(self, bot):
+        self.bot = bot
+        # Make a json file that holds the guild id with the cogs disabled if not found
+        if not isfile(f'{__package__}/data/disabled_cogs.json'):
+            with open(f'{__package__}/data/disabled_cogs.json', 'w') as file:
+                json.dump({}, file, indent=4, sort_keys=True)
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def disablecog(self, ctx, cog_name: str):
+        '''
+        Disables the cog given for the guild so it can not be used
+        '''
+
+        if cog_name.title() != 'Cogdisable' and cog_name.title() != 'Reloader':
+            # Check if the cog is even loaded/valid
+            if cog_name.title() in self.bot.cogs:
+                # Load the data file
+                with open(f'{__package__}/data/disabled_cogs.json', 'r+') as file:
+                    data = json.load(file)
+
+                    # Check if the guild is already disabling cogs
+                    # If not add it too the file
+                    if str(ctx.guild.id) not in data:
+                        data[str(ctx.guild.id)] = []
+
+                    # Check if cog is already disabled
+                    if cog_name.title() in data[(str(ctx.guild.id))]:
+                        await ctx.send("That cog is already disabled for this guild")
+
+                    else:
+                        data[str(ctx.guild.id)].append(cog_name.title())
+                        
+                        # Clear the file before saving
+                        file.seek(0)
+                        file.truncate()
+
+                        json.dump(data, file, indent=4, sort_keys=True)
+                        await ctx.send("Cog is now disabled")
+            else:
+                await ctx.send("That cog hasn't been loaded or isn't vaild")
+
+        else:
+            await ctx.send("You can't disable that cog it is needed")
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def enablecog(self, ctx, cog_name: str):
+        '''
+        Enables the cog given for the guild so it can be used again
+        '''
+
+        # Check if the cog is even loaded/valid
+        if cog_name.title() in self.bot.cogs:
+            # Load the data file
+            with open(f'{__package__}/data/disabled_cogs.json', 'r+') as file:
+                data = json.load(file)
+
+                # Check if cog is disabled
+                if cog_name.title() in data[(str(ctx.guild.id))]:
+                    data[str(ctx.guild.id)].remove(cog_name.title())
+
+                    # Check if the guild can be removed from the file
+                    if not data[str(ctx.guild.id)]:
+                        del data[str(ctx.guild.id)]
+
+                    # Clear the file before saving
+                    file.seek(0)
+                    file.truncate()
+
+                    json.dump(data, file, indent=4, sort_keys=True)
+                    await ctx.send("Cog is now enabled")
+
+                else:
+                    await ctx.send("That cog isn't disabled for this guild")
+        else:
+            await ctx.send("That cog hasn't been loaded or isn't vaild")
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def listcogs(self, ctx):
+        '''
+        Lists the cogs showing what ones are disabled for the guild
+        '''
+
+        # Load the data file
+        with open(f'{__package__}/data/disabled_cogs.json', 'r') as file:
+            data = json.load(file)
+
+        # Set data to only the guild's data if any
+        if str(ctx.guild.id) in data:
+            data = data[str(ctx.guild.id)]
+        else:
+            data = []
+
+        msg = 'Cogs: ```'
+
+        # Loop over all the cogs and tell user what is disabled
+        for cog in self.bot.cogs:
+            if cog == 'Cogdisable' or cog == 'Reloader':
+                continue
+
+            if cog in data:
+                msg += f'{cog} [DISABLED]\n'
+
+            else:
+                msg += f'{cog} [ENABLED]\n'
+
+            if len(msg) > 1500:
+                msg += '```'
+                await ctx.send(msg)
+                msg = '```'
+
+        msg += '```'
+        await ctx.send(msg)
+
 class Reloader:
-    ''' Allows owners to load/unload/reload cogs easily
-    '''
+    ''' Allows owners to load/unload/reload cogs easily '''
 
     def __init__(self, bot):
         self.bot = bot
@@ -178,5 +300,27 @@ async def send_cmd_help(bot, ctx):
 
     else:
         pages = await bot.formatter.format_help_for(ctx, ctx.command)
-    
+
     return pages
+
+def check_enabled(ctx):
+    ''' Check if cog is enabled do be done in local check '''
+    if isinstance(ctx.channel, discord.abc.PrivateChannel):
+        return True
+
+    # Load the data file
+    with open(f'{__package__}/data/disabled_cogs.json', 'r') as file:
+        data = json.load(file)
+
+    # Check if guild is even disabling anything
+    if str(ctx.guild.id) in data:
+        cog_name = ctx.command.cog_name
+
+        # Check if cog is disabled
+        if cog_name in data[str(ctx.guild.id)]:
+            return False
+
+        else:
+            return True
+    else:
+        return True

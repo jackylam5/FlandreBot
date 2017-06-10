@@ -23,6 +23,9 @@ class Guildstuff:
         self.bot.remove_listener(self.check_tag, "on_message")
         self.bot.remove_listener(self.send_welcome, "on_member_join")
         self.bot.remove_listener(self.send_leave, "on_member_remove")
+    
+    async def __local_check(self, ctx):
+        return utils.check_enabled(ctx)
 
     def check_guild_messages(self, guild):
         '''

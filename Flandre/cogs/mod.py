@@ -21,6 +21,9 @@ class Mod:
 
         self.bot.remove_listener(self.check_filter, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
+    
+    async def __local_check(self, ctx):
+        return utils.check_enabled(ctx)
 
     def clean_reason(self, reason):
         ''' Removes ` from the reason to stop escaping and format mentions if in reason '''

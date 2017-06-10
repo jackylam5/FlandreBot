@@ -87,6 +87,9 @@ class Animestuff:
         self.hourly_notify.cancel()
         self.airing_today = []
         self.all_airing_ids = {}
+    
+    async def __local_check(self, ctx):
+        return utils.check_enabled(ctx)
 
     async def token_refresher_task(self):
         ''' Background task to refresh anilist api token every hour '''

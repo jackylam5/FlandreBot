@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from youtube_dl import version
 
-from .. import permissions
+from .. import permissions, utils
 
 
 class Info:
@@ -16,6 +16,9 @@ class Info:
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def __local_check(self, ctx):
+        return utils.check_enabled(ctx)
 
     @commands.command()
     async def botinfo(self, ctx):

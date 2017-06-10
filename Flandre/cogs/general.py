@@ -20,6 +20,9 @@ class General:
         ''' Remove listeners '''
 
         self.bot.remove_listener(self.check_poll_votes, "on_message")
+    
+    async def __local_check(self, ctx):
+        return utils.check_enabled(ctx)
 
     @commands.command(hidden=True)
     async def ping(self, ctx):
