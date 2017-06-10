@@ -14,14 +14,17 @@ class Mod:
     def __init__(self, bot):
         self.bot = bot
         self.logging_channels = utils.check_cog_config(self, 'logging_channels.json')
+        self.message_channels = utils.check_cog_config(self, 'message_channels.json')
         self.filter = utils.check_cog_config(self, 'filter.json')
+        self.filtered_message = False
 
     def __unload(self):
         ''' Remove listeners '''
 
         self.bot.remove_listener(self.check_filter, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
-    
+        self.bot.remove_listener(self.post_deleted_message, "on_message_delete")
+
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
 
@@ -38,7 +41,6 @@ class Mod:
 
         return reason
 
-
     @commands.command()
     @commands.guild_only()
     @permissions.check_admin()
@@ -51,12 +53,34 @@ class Mod:
         else:
             self.logging_channels[str(ctx.guild.id)] = ctx.channel.id
 
-        utils.saveCogConfig(self, 'logging_channels.json', self.logging_channels)
+        utils.save_cog_config(self, 'logging_channels.json', self.logging_channels)
 
         if removed:
             await ctx.send('This channel is no longer the log channel for the mod actions.')
         else:
             await ctx.send('This channel has been made the log channel for the mod actions.')
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def messagechannel(self, ctx):
+        '''
+        Sets the channel command is typed in as the message channel for that server
+        Used to put message delete in this channel
+        '''
+        removed = False
+        if str(ctx.guild.id) in self.message_channels:
+            self.message_channels.pop(str(ctx.guild.id))
+            removed = True
+        else:
+            self.message_channels[str(ctx.guild.id)] = ctx.channel.id
+
+        utils.save_cog_config(self, 'message_channels.json', self.message_channels)
+
+        if removed:
+            await ctx.send('This channel is no longer the message channel for the cleanup actions.')
+        else:
+            await ctx.send('This channel has been made the message channel for the cleanup actions.')
 
     @commands.command()
     @commands.guild_only()
@@ -288,8 +312,16 @@ class Mod:
                         break
 
             # Log in the clean up in log_channel if set up
-            if str(ctx.guild.id) in self.logging_channels:
+            send_message = False
+            log_channel = None
+            if str(ctx.guild.id) in self.message_channels:
+                send_message = True
+                log_channel = self.bot.get_channel(self.message_channels[str(ctx.guild.id)])
+            elif str(ctx.guild.id) in self.logging_channels:
+                send_message = True
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
+            
+            if send_message:
                 desc = (f'{ctx.author.mention} has cleaned up **{deleted}** messages containing '
                         f'**{text}** in {ctx.channel.mention}')
                 embed = discord.Embed(type='rich', description=desc)
@@ -330,8 +362,16 @@ class Mod:
                         break
 
             # Log in the clean up in log_channel if set up
-            if str(ctx.guild.id) in self.logging_channels:
+            send_message = False
+            log_channel = None
+            if str(ctx.guild.id) in self.message_channels:
+                send_message = True
+                log_channel = self.bot.get_channel(self.message_channels[str(ctx.guild.id)])
+            elif str(ctx.guild.id) in self.logging_channels:
+                send_message = True
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
+
+            if send_message:
                 desc = (f'{ctx.author.mention} has cleaned up **{deleted}** messages by '
                         f'**{user.display_name}** in {ctx.channel.mention}')
                 embed = discord.Embed(type='rich', description=desc)
@@ -374,8 +414,16 @@ class Mod:
 
             else:
                 # Log in the clean up in log_channel if set up
-                if str(ctx.guild.id) in self.logging_channels:
+                send_message = False
+                log_channel = None
+                if str(ctx.guild.id) in self.message_channels:
+                    send_message = True
+                    log_channel = self.bot.get_channel(self.message_channels[str(ctx.guild.id)])
+                elif str(ctx.guild.id) in self.logging_channels:
+                    send_message = True
                     log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
+
+                if send_message:
                     desc = (f'{ctx.author.mention} has cleaned up **{number}** messages '
                             f'in {ctx.channel.mention}')
                     embed = discord.Embed(type='rich', description=desc)
@@ -793,7 +841,7 @@ class Mod:
                                 if 'fields' in embed_dict:
                                     for field in embed_dict['fields']:
                                         message.content += '{}\n'.format(field.get('name', ''))
-                                        message.content += '{}\n'.format(field.get('value', ''))                                        
+                                        message.content += '{}\n'.format(field.get('value', ''))
 
                         guild_id = str(message.guild.id)
                         channel_id = str(message.channel.id)
@@ -804,13 +852,14 @@ class Mod:
                             reg = ''
                             for letter in word:
                                 if letter == '.':
-                                    reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                    reg += '\{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                 else:
-                                    reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                    reg += '{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                             found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 await message.delete()
+                                self.filtered_message = True
                                 msg = self.filter[guild_id]['message']
                                 if msg is not None:
                                     msg = msg.replace('%user%', author.mention)
@@ -823,9 +872,9 @@ class Mod:
                                     reg = ''
                                     for letter in word:
                                         if letter == '.':
-                                            reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                            reg += '\{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                         else:
-                                            reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                            reg += '{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                     found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
@@ -869,9 +918,9 @@ class Mod:
                             reg = ''
                             for letter in word:
                                 if letter == '.':
-                                    reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                    reg += '\{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                 else:
-                                    reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                    reg += '{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                             found = re.search(reg, after.content.replace('\\', ''), re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
@@ -887,22 +936,55 @@ class Mod:
                                     reg = ''
                                     for letter in word:
                                         if letter == '.':
-                                            reg += '\{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                            reg += '\{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                         else:
-                                            reg += '{0}+[{1}]*'.format(letter, asciipunct.replace('.', '\.'))
+                                            reg += '{0}+[\u200B{1}]*'.format(letter, asciipunct.replace('.', '\.'))
                                     found = re.search(reg, after.content.replace('\\', ''), re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
                                         await after.delete()
+                                        self.filtered_message = True
                                         msg = self.filter[guild_id]['message']
                                         if msg is not None:
                                             msg = msg.replace('%user%', author.mention)
                                             await after.channel.send(msg)
                                         break
 
+    async def post_deleted_message(self, message):
+        ''' Post when a message is deleted to the log channel '''
+
+        # Check message is not a DM
+        if isinstance(message.channel, discord.abc.GuildChannel):
+            if message.author != self.bot.user:
+                # Log in the deleteion in log_channel if set up
+                send_message = False
+                log_channel = None
+                if str(message.guild.id) in self.message_channels:
+                    send_message = True
+                    log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
+                elif str(message.guild.id) in self.logging_channels:
+                    send_message = True
+                    log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
+
+                if send_message:
+                    if self.filtered_message:
+                        desc = (f'Message from {message.author.display_name} was deleted '
+                                f'from {message.channel.mention} due to filter')
+                        self.filtered_message = False
+                    else:
+                        desc = (f'Message from {message.author.display_name} was deleted '
+                                f'from {message.channel.mention}')
+
+                    embed = discord.Embed(type='rich', description=desc)
+                    if message.clean_content:
+                        embed.add_field(name='Content:', value=message.clean_content)
+                    embed.set_footer(text='Done at {0}'.format(message.created_at.strftime('%c')))
+                    await log_channel.send(embed=embed)
+
 def setup(bot):
     ''' Setup for bot to add cog '''
     cog = Mod(bot)
     bot.add_listener(cog.check_filter, "on_message")
     bot.add_listener(cog.check_edit_filter, "on_message_edit")
+    bot.add_listener(cog.post_deleted_message, "on_message_delete")
     bot.add_cog(cog)
