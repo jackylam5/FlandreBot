@@ -217,6 +217,9 @@ class Animestuff:
                     if anime not in self.airing_today:
                         self.airing_today.append(anime)
 
+            # Remove duplictes if any by converting to a set then a list again
+            self.airing_today = list(set(self.airing_today))
+
             # Check if we have any airing
             if self.airing_today:
 

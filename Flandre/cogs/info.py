@@ -84,32 +84,36 @@ class Info:
 
     @commands.command()
     @commands.guild_only()
-    async def info(self, ctx):
+    async def info(self, ctx, member: discord.Member=None):
         ''' Get users Stats '''
+
+        # Check if a user was mentioned
+        if member is None:
+            member = ctx.author
 
         embedcolour = discord.Colour(65535)
         userembed = discord.Embed(type='rich', colour=embedcolour)
-        userembed.add_field(name='Name', value=ctx.author.name)
-        userembed.add_field(name='ID', value=ctx.author.id)
+        userembed.add_field(name='Name', value=member.name)
+        userembed.add_field(name='ID', value=member.id)
 
         # Check for nickname
-        if ctx.author.nick is not None:
-            userembed.add_field(name='Nickname', value=ctx.author.nick)
+        if member.nick is not None:
+            userembed.add_field(name='Nickname', value=member.nick)
 
-        userembed.add_field(name='Created', value=ctx.author.created_at.strftime('%x @ %X'))
-        userembed.add_field(name='Joined', value=ctx.author.joined_at.strftime('%x @ %X'))
+        userembed.add_field(name='Created', value=member.created_at.strftime('%x @ %X'))
+        userembed.add_field(name='Joined', value=member.joined_at.strftime('%x @ %X'))
 
         # Check voice channel
-        if ctx.author.voice is not None:
-            userembed.add_field(name='Voice Channel', value=ctx.author.voice.channel.name)
+        if member.voice is not None:
+            userembed.add_field(name='Voice Channel', value=member.voice.channel.name)
 
         # Get Users roles
-        roles = [role.name for role in ctx.author.roles if role.name != '@everyone']
+        roles = [role.name for role in member.roles if role.name != '@everyone']
         if roles:
             userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
 
         # Set users avatar
-        userembed.set_thumbnail(url=ctx.author.avatar_url)
+        userembed.set_thumbnail(url=member.avatar_url)
 
         await ctx.send(embed=userembed)
 
@@ -229,8 +233,8 @@ class Info:
 
         if channel is not None:
             if amount > 0:
-                async for x in channel.history(limit=amount):
-                    await ctx.send(f'{x.created_at} {x.author.name}: {x.content}')
+                async for msg in channel.history(limit=amount):
+                    await ctx.send(f'{msg.created_at} {msg.author.name}: {msg.content}')
                     await asyncio.sleep(0.5)
             else:
                 await ctx.send('Please include amount of text bigger than 0')
