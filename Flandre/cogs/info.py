@@ -16,6 +16,12 @@ class Info:
 
     def __init__(self, bot):
         self.bot = bot
+        self.past_names = utils.check_cog_config(self, 'past_names.json')
+
+    def __unload(self):
+        ''' Remove listeners '''
+
+        self.bot.remove_listener(self.check_names, "on_member_update")
 
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
@@ -111,6 +117,11 @@ class Info:
         roles = [role.name for role in member.roles if role.name != '@everyone']
         if roles:
             userembed.add_field(name='Roles', value=', '.join(roles), inline=False)
+
+        # Get past names
+        if str(member.id) in self.past_names:
+            names = ', '.join(self.past_names[str(member.id)])
+            userembed.add_field(name='Past names', value=names, inline=False)
 
         # Set users avatar
         userembed.set_thumbnail(url=member.avatar_url)
@@ -242,9 +253,22 @@ class Info:
         else:
             await ctx.send(f'No channel with id: `{channelid}`')
 
+    async def check_names(self, before, after):
+        ''' Listener to check the users past names'''
+        if before.name != after.name:
+            if str(before.id) not in self.past_names.keys():
+                self.past_names[str(before.id)] = [before.name]
+            else:
+                if before.name not in self.past_names[str(before.id)]:
+                    # If there are 5 or more names remove the oldest one
+                    if len(self.past_names[str(before.id)]) >= 5:
+                        self.past_names[str(before.id)].pop()
+                    self.past_names[str(before.id)].append(before.name)
 
+            utils.save_cog_config(self, 'past_names.json', self.past_names)
 
 def setup(bot):
     ''' Add the cog to the bot '''
     cog = Info(bot)
+    bot.add_listener(cog.check_names, "on_member_update")
     bot.add_cog(cog)
