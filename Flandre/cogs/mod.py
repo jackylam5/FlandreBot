@@ -10,6 +10,45 @@ from discord.ext import commands
 
 from .. import permissions, utils
 
+class BanLogger:
+    '''
+    Used to make a logger for a banned users messages
+    Then send it to the log channel
+    '''
+
+    def __init__(self, loop, user, channel):
+        self.user = user
+        self.channel = channel
+        self.stream = StringIO()
+        self.handler = logging.StreamHandler(self.stream)
+        self.handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s > %(message)s'))
+        self.logger = logging.getLogger(self.user.name)
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(self.handler)
+        self.log_task = loop.create_task(self.ban_log())
+
+    async def ban_log(self):
+        ''' Task to wait a bot then send a message to the channel '''
+
+        # We will wait 10 seconds incase ban adding takes a while
+        await asyncio.sleep(10)
+
+        # Close logger
+        self.handler.flush()
+        self.stream.flush()
+        self.logger.removeHandler(self.handler)
+        self.logger = None
+
+        logfile = BytesIO(bytes(self.stream.getvalue(), 'utf-8'))
+        self.stream.close()
+        desc = f'Name: {self.user.name}#{self.user.discriminator}'
+        embed = discord.Embed(type='rich', description=desc)
+        embed.set_author(name='Message Log (From Ban)')
+        embed.set_thumbnail(url=self.user.avatar_url)
+        await self.channel.send(embed=embed,
+                                file=discord.File(logfile, filename=f"{self.user.name}_ban.log"))
+        logfile.close()
+
 class Mod:
     ''' Moderation tools '''
 
@@ -19,7 +58,8 @@ class Mod:
         self.message_channels = utils.check_cog_config(self, 'message_channels.json')
         self.filter = utils.check_cog_config(self, 'filter.json')
         self.filtered_message = False
-        self.ban_logger = None
+        self.ban_loggers = {}
+        self.ban_log_check = self.bot.loop.create_task(self.ban_log_checker())
 
     def __unload(self):
         ''' Remove listeners '''
@@ -27,9 +67,23 @@ class Mod:
         self.bot.remove_listener(self.check_filter, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
         self.bot.remove_listener(self.post_deleted_message, "on_message_delete")
+        self.ban_loggers = {}
+        self.ban_log_check.cancel()
 
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
+
+    async def ban_log_checker(self):
+        ''' Removes empty ban loggers '''
+
+        while True:
+            if self.ban_loggers:
+                for uid, logger in self.ban_loggers.copy().items():
+                    if logger.logger is None:
+                        del self.ban_loggers[uid]
+                    else:
+                        continue
+            await asyncio.sleep(300)
 
     def clean_reason(self, reason):
         ''' Removes ` from the reason to stop escaping and format mentions if in reason '''
@@ -43,44 +97,6 @@ class Mod:
             reason = reason.replace(match[0], f'@{user.name}#{user.discriminator}')
 
         return reason
-
-    async def ban_log(self, user_name, guild_id):
-        ''' Used to make a ban logger to send a file to the log channel when someone is banned '''
-        # Set up the ban log
-        stream = StringIO()
-        handler = logging.StreamHandler(stream)
-        fmt_msg = '%(asctime)s - %(name)s > %(message)s'
-        formatter = logging.Formatter(fmt_msg)
-        handler.setFormatter(formatter)
-        self.ban_logger = logging.getLogger(user_name)
-        self.ban_logger.setLevel(logging.INFO)
-        self.ban_logger.addHandler(handler)
-
-        # We will wait 1 min incase ban adding takes a while
-        await asyncio.sleep(5)
-
-        # Close logger
-        handler.flush()
-        stream.flush()
-        self.ban_logger.removeHandler(handler)
-        self.ban_logger = None
-
-        # Log in the clean up in log_channel if set up
-        send_message = False
-        log_channel = None
-        if str(guild_id) in self.message_channels:
-            send_message = True
-            log_channel = self.bot.get_channel(self.message_channels[str(guild_id)])
-        elif str(guild_id) in self.logging_channels:
-            send_message = True
-            log_channel = self.bot.get_channel(self.logging_channels[str(guild_id)])
-
-        logfile = BytesIO(bytes(stream.getvalue(), 'utf-8'))
-        stream.close()
-        if send_message:
-            await log_channel.send(f"Log for ban of {user_name}",
-                                   file=discord.File(logfile, filename=f"{user_name}_ban.log"))
-            logfile.close()
 
     @commands.command()
     @commands.guild_only()
@@ -150,9 +166,12 @@ class Mod:
         else:
             if str(ctx.guild.id) in self.logging_channels:
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
-                desc = f'{ctx.author.mention} has kicked {user.mention} (ID: {user.id})'
-                embed = discord.Embed(type='rich', description=desc)
-                embed.set_footer(text='Done at {0}'.format(ctx.message.created_at.strftime('%c')))
+                timestamp = ctx.message.created_at
+                desc = f'Name: {user.name}\nID: {user.id}'
+                embed = discord.Embed(type='rich', description=desc, timestamp=timestamp)
+                embed.set_author(name='Kick Log')
+                embed.set_thumbnail(url=user.avatar_url)
+                embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                 if reason != '':
                     embed.add_field(name='Reason:', value=f'```{reason}```')
                 await log_channel.send(embed=embed)
@@ -175,8 +194,6 @@ class Mod:
                 await ctx.guild.ban(user, reason=reason, delete_message_days=1)
                 await ctx.send(f"Done. User banned for reason: `{reason}`")
 
-            task = asyncio.ensure_future(self.ban_log(user.name, ctx.guild.id))
-
         except discord.errors.Forbidden:
             await ctx.send("Can't do that user has higher role than me")
 
@@ -185,15 +202,25 @@ class Mod:
 
         else:
             if str(ctx.guild.id) in self.logging_channels:
+                # Get log Channel
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
-                desc = f'{ctx.author.mention} has banned {user.mention} (ID: {user.id})'
-                embed = discord.Embed(type='rich', description=desc)
-                embed.set_footer(text='Done at {0}'.format(ctx.message.created_at.strftime('%c')))
+
+                # Make the Ban message logger for the user
+                if str(ctx.guild.id) in self.message_channels:
+                    message_channel = self.bot.get_channel(self.message_channels[str(ctx.guild.id)])
+                    self.ban_loggers[user.id] = BanLogger(self.bot.loop, user, message_channel)
+                else:
+                    self.ban_loggers[user.id] = BanLogger(self.bot.loop, user, log_channel)
+
+                timestamp = ctx.message.created_at
+                desc = f'Name: {user.name}\nID: {user.id}'
+                embed = discord.Embed(type='rich', description=desc, timestamp=timestamp)
+                embed.set_author(name='Ban Log')
+                embed.set_thumbnail(url=user.avatar_url)
+                embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                 if reason != '':
                     embed.add_field(name='Reason:', value=f'```{reason}```')
                 await log_channel.send(embed=embed)
-
-            await task
 
     @commands.command()
     @commands.guild_only()
@@ -260,8 +287,6 @@ class Mod:
                 await ctx.guild.unban(user, reason=reason)
                 await ctx.send(f"Done. User softbanned for reason: `{reason}`")
 
-            task = asyncio.ensure_future(self.ban_log(user.name, ctx.guild.id))
-
         except discord.errors.Forbidden:
             await ctx.send("Can't do that user has higher role than me")
 
@@ -270,15 +295,25 @@ class Mod:
 
         else:
             if str(ctx.guild.id) in self.logging_channels:
+                # Get log Channel
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
-                desc = f'{ctx.author.mention} has softbanned {user.mention} (ID: {user.id})'
-                embed = discord.Embed(type='rich', description=desc)
-                embed.set_footer(text='Done at {0}'.format(ctx.message.created_at.strftime('%c')))
+
+                # Make the Ban message logger for the user
+                if str(ctx.guild.id) in self.message_channels:
+                    message_channel = self.bot.get_channel(self.message_channels[str(ctx.guild.id)])
+                    self.ban_loggers[user.id] = BanLogger(self.bot.loop, user, message_channel)
+                else:
+                    self.ban_loggers[user.id] = BanLogger(self.bot.loop, user, log_channel)
+
+                timestamp = ctx.message.created_at
+                desc = f'Name: {user.name}\nID: {user.id}'
+                embed = discord.Embed(type='rich', description=desc, timestamp=timestamp)
+                embed.set_author(name='Softban Log')
+                embed.set_thumbnail(url=user.avatar_url)
+                embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                 if reason != '':
                     embed.add_field(name='Reason:', value=f'```{reason}```')
                 await log_channel.send(embed=embed)
-
-            await task
 
     @commands.command()
     @commands.guild_only()
@@ -1005,13 +1040,13 @@ class Mod:
         ''' Post when a message is deleted to the log channel '''
 
         # We need to wait incase the ban log is made
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
         # Check message is not a DM
         if isinstance(message.channel, discord.abc.GuildChannel):
             if message.author != self.bot.user:
-              
-                if self.ban_logger is None:
+
+                if message.author.id not in self.ban_loggers:
                     # Log in the deleteion in log_channel if set up
                     send_message = False
                     log_channel = None
@@ -1037,7 +1072,7 @@ class Mod:
                         embed.set_footer(text='Done at {0}'.format(message.created_at.strftime('%c')))
                         await log_channel.send(embed=embed)
                 else:
-                    self.ban_logger.info(message.clean_content)
+                    self.ban_loggers[message.author.id].logger.info(message.clean_content)
 
 def setup(bot):
     ''' Setup for bot to add cog '''
