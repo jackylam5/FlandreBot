@@ -2,6 +2,7 @@
 import asyncio
 import datetime
 import xml.etree.ElementTree as et
+import re
 
 import aiohttp
 import discord
@@ -87,7 +88,8 @@ class Animestuff:
         self.hourly_notify.cancel()
         self.airing_today = []
         self.all_airing_ids = {}
-    
+        self.bot.remove_listener(self.anime_reference, "on_message")
+
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
 
@@ -218,7 +220,7 @@ class Animestuff:
                         self.airing_today.append(anime)
 
             # Remove duplictes if any by converting to a set then a list again
-            self.airing_today = list(set(self.airing_today))
+            # self.airing_today = list(set(self.airing_today))
 
             # Check if we have any airing
             if self.airing_today:
@@ -745,7 +747,55 @@ class Animestuff:
         else:
             await ctx.send("I couldn't find anything from MAL with that search")
 
+    async def anime_reference(self, message):
+        '''
+        Looks for anime wrapped in {} in a message and posts MAL info about it
+        '''
+
+        if message.channel.id in self.subbed_channels['channels']:
+            # Find anime refs
+            found = re.findall('\{([\w :-]+)\}', message.content, re.IGNORECASE)
+
+            print(found)
+            if found:
+                animes = []
+                # Get the MAL info for each anime
+                for anime in found:
+                    mal_info = await self.get_mal_anime_info(anime)
+                    if mal_info:
+                        animes.append(mal_info[0])
+
+                if animes:
+                    print(animes)
+                    for anime in animes:
+                        # Clean the synopsis then create the embed
+                        desc = clean_synopsis(anime['synopsis'])
+                        # Check if desc has more than one paragraph if so tell user to click title for more
+                        if '\n' in desc:
+                            desc = desc.split("\n")[0] + ' **... (Click title for more)**'
+
+                        title = f'{anime["title"]} ({anime["type"]})'
+                        url = f'https://myanimelist.net/anime/{anime["id"]}'
+
+                        anime_embed = discord.Embed(type='rich',
+                                                    colour=10057145,
+                                                    description=desc,
+                                                    title=title,
+                                                    url=url)
+
+                        anime_embed.add_field(name='Status', value=anime['status'])
+                        anime_embed.add_field(name='Episodes', value=anime['episodes'])
+                        anime_embed.add_field(name='Start Date', value=anime['start_date'])
+                        anime_embed.add_field(name='End Date', value=anime['end_date'])
+
+                        # Set embed image and MAL image
+                        anime_embed.set_thumbnail(url=anime['image'])
+                        anime_embed.set_footer(text='Info from MAL', icon_url=MAL_ICON)
+
+                        await message.channel.send(embed=anime_embed)
+
 def setup(bot):
     ''' Add cog to bot '''
     cog = Animestuff(bot)
+    bot.add_listener(cog.anime_reference, "on_message")
     bot.add_cog(cog)
