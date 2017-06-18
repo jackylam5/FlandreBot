@@ -349,7 +349,7 @@ class MusicPlayer:
                     total_votes = len(self.skips)
 
                     # It the number of enough to pass skip
-                    if total_votes >= 3:
+                    if total_votes >= 3 or len(self._vc.channel.members) < 4:
                         self.skips.clear()
                         self._vc.stop()
                         await ctx.send((f'{ctx.author.mention} has voted to skip.\n'
