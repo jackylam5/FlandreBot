@@ -57,7 +57,8 @@ class Mod:
         self.logging_channels = utils.check_cog_config(self, 'logging_channels.json')
         self.message_channels = utils.check_cog_config(self, 'message_channels.json')
         self.filter = utils.check_cog_config(self, 'filter.json')
-        self.filtered_message = False
+        self.filtered_messages = []
+        self.clean_up_messages = []
         self.ban_loggers = {}
         self.ban_log_check = self.bot.loop.create_task(self.ban_log_checker())
 
@@ -367,6 +368,7 @@ class Mod:
     async def after_cleanup_command(self, ctx):
         ''' Delete the cleanup command message after it is done '''
         if ctx.invoked_subcommand:
+            self.clean_up_messages.append(ctx.message.id)
             await ctx.message.delete()
 
     @cleanup.command()
@@ -387,6 +389,7 @@ class Mod:
                 async for log_message in ctx.channel.history(limit=10, before=message):
                     if text.lower() in log_message.content.lower():
                         reason = f'Cleanup text: {text} by {ctx.author.name}'
+                        self.clean_up_messages.append(log_message.id)
                         await log_message.delete(reason=reason)
                         await asyncio.sleep(0.25)
                         number -= 1
@@ -437,6 +440,7 @@ class Mod:
                 async for log_message in ctx.channel.history(limit=10, before=message):
                     if log_message.author.id == user.id:
                         reason = f'Cleanup user: {user.display_name} by {ctx.author.name}'
+                        self.clean_up_messages.append(log_message.id)
                         await log_message.delete(reason=reason)
                         await asyncio.sleep(0.25)
                         number -= 1
@@ -485,6 +489,7 @@ class Mod:
             # Get the messages to delete (amount = number)
             async for log_message in ctx.channel.history(limit=number, before=ctx.message):
                 to_delete.append(log_message)
+                self.clean_up_messages.append(log_message.id)
 
             try:
                 reason = f'Cleanup messages by {ctx.author.name}'
@@ -942,8 +947,8 @@ class Mod:
                             found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
+                                self.filtered_messages.append(message.id)
                                 await message.delete()
-                                self.filtered_message = True
                                 msg = self.filter[guild_id]['message']
                                 if msg is not None:
                                     msg = msg.replace('%user%', author.mention)
@@ -962,8 +967,8 @@ class Mod:
                                     found = re.search(reg, message.content.replace('\\', ''), re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
+                                        self.filtered_messages.append(message.id)
                                         await message.delete()
-                                        self.filtered_message = True
                                         msg = self.filter[guild_id]['message']
                                         if msg is not None:
                                             msg = msg.replace('%user%', author.mention)
@@ -1009,8 +1014,8 @@ class Mod:
                             found = re.search(reg, after.content.replace('\\', ''), re.IGNORECASE)
                             # If re found the word delete it and tell the user
                             if found is not None:
+                                self.filtered_messages.append(after.id)
                                 await after.delete()
-                                self.filtered_message = True
                                 msg = self.filter[guild_id]['message']
                                 if msg is not None:
                                     await after.channel.send(msg.replace('%user%', author.mention))
@@ -1028,8 +1033,8 @@ class Mod:
                                     found = re.search(reg, after.content.replace('\\', ''), re.IGNORECASE)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
+                                        self.filtered_messages.append(after.id)
                                         await after.delete()
-                                        self.filtered_message = True
                                         msg = self.filter[guild_id]['message']
                                         if msg is not None:
                                             msg = msg.replace('%user%', author.mention)
@@ -1058,18 +1063,23 @@ class Mod:
                         log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
 
                     if send_message:
-                        if self.filtered_message:
-                            desc = (f'Message from {message.author.display_name} was deleted '
-                                    f'from {message.channel.mention} due to filter')
-                            self.filtered_message = False
-                        else:
-                            desc = (f'Message from {message.author.display_name} was deleted '
-                                    f'from {message.channel.mention}')
+                        desc = (f'Author: {message.author.name}#{message.author.discriminator}\n'
+                                f'Channel: {message.channel.mention}\n'
+                                f'Timestamp: {message.created_at.strftime("%c")}')
 
                         embed = discord.Embed(type='rich', description=desc)
+                        embed.set_author(name='Message deletion')
+                        embed.set_thumbnail(url=message.author.avatar_url)
                         if message.clean_content:
                             embed.add_field(name='Content:', value=message.clean_content)
-                        embed.set_footer(text='Done at {0}'.format(message.created_at.strftime('%c')))
+                        if message.id in self.filtered_messages:
+                            embed.set_footer(text='Done due to filter')
+                            self.filtered_messages.remove(message.id)
+                        elif message.id in self.clean_up_messages:
+                            embed.set_footer(text='Done due to cleanup command')
+                            self.clean_up_messages.remove(message.id)
+                        else:
+                            embed.set_footer(text='Done by user/staff')
                         await log_channel.send(embed=embed)
                 else:
                     self.ban_loggers[message.author.id].logger.info(message.clean_content)
