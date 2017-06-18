@@ -219,9 +219,6 @@ class Animestuff:
                     if anime not in self.airing_today:
                         self.airing_today.append(anime)
 
-            # Remove duplictes if any by converting to a set then a list again
-            # self.airing_today = list(set(self.airing_today))
-
             # Check if we have any airing
             if self.airing_today:
 
@@ -756,7 +753,6 @@ class Animestuff:
             # Find anime refs
             found = re.findall('\{([\w :-]+)\}', message.content, re.IGNORECASE)
 
-            print(found)
             if found:
                 animes = []
                 # Get the MAL info for each anime
@@ -766,7 +762,6 @@ class Animestuff:
                         animes.append(mal_info[0])
 
                 if animes:
-                    print(animes)
                     for anime in animes:
                         # Clean the synopsis then create the embed
                         desc = clean_synopsis(anime['synopsis'])
