@@ -409,10 +409,12 @@ class Mod:
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
 
             if send_message:
-                desc = (f'{ctx.author.mention} has cleaned up **{deleted}** messages containing '
-                        f'**{text}** in {ctx.channel.mention}')
+                desc = (f'Channel: {ctx.channel.mention}\n'
+                        f'Text: {text}\n'
+                        f'Amount: {deleted}')
                 embed = discord.Embed(type='rich', description=desc)
-                embed.set_footer(text='Done at {0}'.format(ctx.message.created_at.strftime('%c')))
+                embed.set_author(name='Cleanup Log')
+                embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                 await log_channel.send(embed=embed)
 
         except discord.errors.Forbidden:
@@ -460,10 +462,12 @@ class Mod:
                 log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
 
             if send_message:
-                desc = (f'{ctx.author.mention} has cleaned up **{deleted}** messages by '
-                        f'**{user.display_name}** in {ctx.channel.mention}')
+                desc = (f'Channel: {ctx.channel.mention}\n'
+                        f'From: {user.name}#{user.discriminator}\n'
+                        f'Amount: {deleted}')
                 embed = discord.Embed(type='rich', description=desc)
-                embed.set_footer(text='Done at {0}'.format(ctx.message.created_at.strftime('%c')))
+                embed.set_author(name='Cleanup Log')
+                embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                 await log_channel.send(embed=embed)
 
         except discord.errors.Forbidden:
@@ -513,11 +517,11 @@ class Mod:
                     log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
 
                 if send_message:
-                    desc = (f'{ctx.author.mention} has cleaned up **{number}** messages '
-                            f'in {ctx.channel.mention}')
+                    desc = (f'Channel: {ctx.channel.mention}\n'
+                            f'Amount: {len(to_delete)}')
                     embed = discord.Embed(type='rich', description=desc)
-                    time = ctx.message.created_at.strftime('%c')
-                    embed.set_footer(text='Done at {0}'.format(time))
+                    embed.set_author(name='Cleanup Log')
+                    embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url) 
                     await log_channel.send(embed=embed)
 
     @commands.group(name='filter')
