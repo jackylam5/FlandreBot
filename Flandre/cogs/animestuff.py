@@ -216,7 +216,9 @@ class Animestuff:
                 airdate = parse(anime['airing']['time'])
                 # Check if it airs today
                 if airdate <= midnight_tomorrow:
-                    if anime not in self.airing_today:
+                    if anime in self.airing_today:
+                        continue
+                    else:
                         self.airing_today.append(anime)
 
             # Check if we have any airing
