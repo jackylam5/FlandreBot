@@ -17,7 +17,7 @@ import discord
 from discord.ext import commands
 
 from . import utils
-from .errors import LoginError, MissingConfigFile
+from .errors import LoginError, MissingConfigFile, CogDisabled
 
 def make_logger():
     ''' Make the logger for the bot
@@ -190,10 +190,15 @@ class Bot(commands.AutoShardedBot):
             # Tell the user the command can not be done in a private message
             await ctx.send('Command can\'t be used in a Private Message')
 
+        elif isinstance(error, CogDisabled):
+            # The cog was disabled
+            await ctx.send('The cog this command is in has been '
+                           'disabled for this guild')
+
         elif isinstance(error, commands.errors.CheckFailure):
             # Tell the user they do not have permission to use that command
             await ctx.send(('You are not able to run this command '
-                            'due to your permissions or the cog being disabled'))
+                            'due to your permissions'))
 
         elif isinstance(error, commands.errors.BadArgument):
             # Tell the user there was a bad argument

@@ -9,7 +9,7 @@ from os.path import isdir, isfile
 import discord
 from discord.ext import commands
 
-from . import permissions
+from . import permissions, errors
 
 
 class Cogdisable:
@@ -317,7 +317,7 @@ def check_enabled(ctx):
 
         # Check if cog is disabled
         if cog_name in data[str(ctx.guild.id)]:
-            return False
+            raise errors.CogDisabled
 
         else:
             return True
