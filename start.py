@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 ''' start.py
 Used to start the discord bot
 Written by jackylam5 and maware
@@ -6,12 +8,13 @@ Written by jackylam5 and maware
 import sys
 import Flandre
 
-try:
-    BOT = Flandre.Bot()
-except Flandre.MissingConfigFile:
-    sys.exit()
-else:
+if __name__ == '__main__':
     try:
-        BOT.run()
-    except Flandre.LoginError:
+        BOT = Flandre.Bot()
+    except Flandre.MissingConfigFile:
         sys.exit()
+    else:
+        try:
+            BOT.run()
+        except Flandre.LoginError:
+            sys.exit()
