@@ -58,7 +58,7 @@ class Cogdisable:
 
                     # Check if cog is already disabled
                     if cog_name.title() in data[(str(ctx.guild.id))]:
-                        await ctx.send("That cog is already disabled for this guild")
+                        await ctx.send('That cog is already disabled for this guild')
 
                     else:
                         data[str(ctx.guild.id)].append(cog_name.title())
@@ -68,7 +68,7 @@ class Cogdisable:
                         file.truncate()
 
                         json.dump(data, file, indent=4, sort_keys=True)
-                        await ctx.send("Cog is now disabled")
+                        await ctx.send('Cog is now disabled')
             else:
                 await ctx.send("That cog hasn't been loaded or isn't vaild")
 
@@ -102,7 +102,7 @@ class Cogdisable:
                     file.truncate()
 
                     json.dump(data, file, indent=4, sort_keys=True)
-                    await ctx.send("Cog is now enabled")
+                    await ctx.send('Cog is now enabled')
 
                 else:
                     await ctx.send("That cog isn't disabled for this guild")
