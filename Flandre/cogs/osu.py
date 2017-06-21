@@ -104,12 +104,13 @@ class Osu:
 
             # Find the rank they got
             match = USER_RECENT_REGEX.match(recent)
-            rank = RANK_EMOTES[match[1]]
-            username = match[2]
-            number = match[3]
-            beatmap = f'[{match[5]}]({OSU_BASE_URL}/b/{match[4]})'
-            mode = match[6]
-            embed.add_field(name='Recent:', value=f'{rank} Achieved {number} on {beatmap} {mode}')
+            if match is not None:
+                rank = RANK_EMOTES[match[1]]
+                username = match[2]
+                number = match[3]
+                beatmap = f'[{match[5]}]({OSU_BASE_URL}/b/{match[4]})'
+                mode = match[6]
+                embed.add_field(name='Recent:', value=f'{rank} Achieved #{number} on {beatmap} ({mode})')
 
         return embed
 
