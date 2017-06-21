@@ -108,7 +108,6 @@ class Animestuff:
                 async with aioclient.post(auth_url, data=auth_data) as resp:
                     data = await resp.json()
 
-
             # Save token and wait untill it expires
             self.token = data['access_token']
             await asyncio.sleep(data['expires_in'])
@@ -124,7 +123,6 @@ class Animestuff:
         async with aiohttp.ClientSession() as aioclient:
             async with aioclient.get(request_url, params=params) as resp:
                 data = await resp.json()
-
         return data
 
     async def get_mal_anime_info(self, anime):
@@ -269,6 +267,7 @@ class Animestuff:
         ''' Gets the next airing episode and posts in subbed channels when it comes out '''
         # Wait for token
         await asyncio.sleep(1)
+
         while True:
             await self.anime_to_be_released.wait()
             self.anime_to_be_released.clear()
@@ -316,14 +315,16 @@ class Animestuff:
                 embed.set_author(name='Just Released:')
 
                 # Add crunchyroll link to embed if it was found
-                if cr_link != '':
-                    embed.description += '\nWatch on [Crunchyroll]({0})'.format(cr_link)
+                if cr_link:
+                    embed.description += f'\nWatch on [Crunchyroll]({cr_link})'
                 embed.set_thumbnail(url=anime['image_url_lge'])
 
                 # Add links to embed
-                links = '[Anilist](https://anilist.co/anime/{0})'.format(anime[0]['id'])
+                aid = anime[0]['id']
+                links = f'[Anilist](https://anilist.co/anime/{aid})'
                 if mal_data:
-                    links += ' [MAL](https://myanimelist.net/anime/{0})'.format(mal_data[0]['id'])
+                    mid = mal_data[0]['id']
+                    links += f' [MAL](https://myanimelist.net/anime/{mid})'
                 embed.add_field(name='Links:', value=links)
 
                 dm_msg = (f'Type **@{self.bot.user.name} anime notify '
@@ -511,11 +512,13 @@ class Animestuff:
         anime_embed.add_field(name='Episode', value=ep_info, inline=False)
 
         # Add links to embed
-        links = '[Anilist](https://anilist.co/anime/{0})'.format(next_airing['id'])
+        aid = next_airing['id']
+        links = f'[Anilist](https://anilist.co/anime/{aid})'
         if mal_data:
-            links += ' [MAL](https://myanimelist.net/anime/{0})'.format(mal_data[0]['id'])
-        if cr_link != '':
-            links += ' [Crunchyroll]({0})'.format(cr_link)
+            mid = mal_data[0]['id']
+            links += f' [MAL](https://myanimelist.net/anime/{0})'
+        if cr_link:
+            links += f' [Crunchyroll]({cr_link})'
         anime_embed.add_field(name='Links:', value=links)
 
         dm_msg = (f'Type **@{self.bot.user.name} anime notify {next_airing["id"]}** '
@@ -678,20 +681,20 @@ class Animestuff:
             anime_embed.add_field(name='Episode', value=ep_info, inline=False)
 
             # Add links to embed
-            links = '[Anilist](https://anilist.co/anime/{0})'.format(anime_info['id'])
+            aid = anime_info['id']
+            links = f'[Anilist](https://anilist.co/anime/{aid})'
             if mal_data:
-                links += ' [MAL](https://myanimelist.net/anime/{0})'.format(mal_data[0]['id'])
-            if cr_link != '':
-                links += ' [Crunchyroll]({0})'.format(cr_link)
+                mid = mal_data[0]['id']
+                links += f' [MAL](https://myanimelist.net/anime/{0})'
+            if cr_link:
+                links += f' [Crunchyroll]({cr_link})'
             anime_embed.add_field(name='Links:', value=links)
 
             dm_msg = (f'Type **@{self.bot.user.name} anime notify {anime_info["id"]}** '
                       'to get DM notifications for this anime')
 
             anime_embed.add_field(name='DM Notification:', value=dm_msg)
-
             await ctx.send(embed=anime_embed)
-
         else:
             await ctx.send((f"{ctx.author.mention}, "
                             "I couldn't find that anime. "
