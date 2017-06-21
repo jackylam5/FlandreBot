@@ -115,7 +115,7 @@ class Animestuff:
         self.hourly_notify.cancel()
         self.airing_today = []
         self.all_airing_ids = {}
-        self.bot.remove_listener(self.anime_reference, "on_message")
+        self.bot.remove_listener(self.anime_reference, 'on_message')
 
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
