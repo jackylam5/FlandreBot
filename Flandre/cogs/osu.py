@@ -31,7 +31,7 @@ RANK_EMOTES = {'D': '<:Drank:327169368003837953>',
               }
 OSU_BASE_URL = 'https://osu.ppy.sh'
 
-USER_RECENT_REGEX = re.compile(r"<img src='/images/([^_]+)_small.png'/>\s*<b>\s*<a href='/u/\d+'>([^<]+)</a>\s*</b>\s*achieved rank #(\d+) on <a href='/b/([^'*)'>([^<]+)</a>\s*'\([^\)]*\)$")
+USER_RECENT_REGEX = re.compile(r"<img src='\/images\/([A-Za-z]+)_small\.png'\/>\s*<b>\s*<a href='\/u\/\d+'>([^<]+)<\/a>\s*<\/b>\s*achieved rank #(\d+) on <a href='\/b\/([0-9]+\?m=[0-9])'>([^<]+)<\/a>\s*\(([^\(]+)\)")
 
 class Osu:
     '''
@@ -105,6 +105,7 @@ class Osu:
             # Find the rank they got
             match = USER_RECENT_REGEX.match(recent)
             rank = RANK_EMOTES[match[1]]
+            username = match[2]
             number = match[3]
             beatmap = f'[{match[5]}]({OSU_BASE_URL}/b/{match[4]})'
             mode = match[6]
