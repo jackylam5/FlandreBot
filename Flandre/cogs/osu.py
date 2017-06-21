@@ -110,7 +110,7 @@ class Osu:
             rank = RANK_EMOTES[match[1]]
             number = RANK_REGEX.search(recent)[0]
             match = BEATMAP_URL_REGEX.search(recent)
-            beatmap = f'[{beatmap[2]}]({OSU_BASE_URL}/b/{beatmap[1]}'
+            beatmap = f'[{match[2]}]({OSU_BASE_URL}/b/{match[1]})'
             mode = MODE_REGEX.search(recent)[0]
             embed.add_field(name='Recent:', value=f'{rank} Achieved {number} on {beatmap} {mode}')
 
