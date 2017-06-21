@@ -50,6 +50,29 @@ def clean_synopsis(synopsis):
 
     return synopsis
 
+class Anime:
+    '''
+    This holds all the infomation we need about a anime
+    from anilist for the anime cog
+    '''
+
+    def __init__(self, anime):
+        self.id = anime.get('id')
+        self.title = anime.get('title_romaji')
+        self.english_title = anime.get('title_english')
+        self.type = anime.get('type')
+        self.total_episodes = anime.get('total_episodes')
+        self.image_url = anime.get('image_url_lge')
+        self.next_episode = anime['airing'].get('next_episode')
+        self.countdown = anime['airing'].get('countdown')
+        self.release_time = parse(anime['airing'].get('time'))
+
+    def recalculate_countdown(self, time_now):
+        ''' Recalculates the countdown from the current time '''
+
+        countdown = parse(self.release_time) - time_now
+        self.countdown = round(countdown.total_seconds())
+
 class Animestuff:
     '''
     Cog that has all anime and manga related items.
