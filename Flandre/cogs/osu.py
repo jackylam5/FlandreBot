@@ -31,10 +31,7 @@ RANK_EMOTES = {'D': '<:Drank:327169368003837953>',
               }
 OSU_BASE_URL = 'https://osu.ppy.sh'
 
-RANK_IMAGE_REGEX = re.compile(r"<img src='/images/([^ ]+)_small\.png")
-RANK_REGEX = re.compile(r'rank #\d+')
-BEATMAP_URL_REGEX = re.compile(r"<a href='/b/(.*)'>(.*)</a>")
-MODE_REGEX = re.compile(r'\(.*\)$')
+USER_RECENT_REGEX = re.compile(r"<img src='/images/([^_]+)_small.png'/>\s*<b>\s*<a href='/u/\d+'>([^<]+)</a>\s*</b>\s*achieved rank #(\d+) on <a href='/b/([^'*)'>([^<]+)</a>\s*'\([^\)]*\)$")
 
 class Osu:
     '''
@@ -106,12 +103,11 @@ class Osu:
             recent = user['events'][0]['display_html']
 
             # Find the rank they got
-            match = RANK_IMAGE_REGEX.search(recent)
+            match = USER_RECENT_REGEX.match(recent)
             rank = RANK_EMOTES[match[1]]
-            number = RANK_REGEX.search(recent)[0]
-            match = BEATMAP_URL_REGEX.search(recent)
-            beatmap = f'[{match[2]}]({OSU_BASE_URL}/b/{match[1]})'
-            mode = MODE_REGEX.search(recent)[0]
+            number = match[3]
+            beatmap = f'[{match[5]}]({OSU_BASE_URL}/b/{match[4]})'
+            mode = match[6]
             embed.add_field(name='Recent:', value=f'{rank} Achieved {number} on {beatmap} {mode}')
 
         return embed
