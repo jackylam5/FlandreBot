@@ -7,10 +7,10 @@ from discord.ext import commands
 
 from .. import permissions, utils
 
-OSU_MODES = {'0': 'osu!',
-             '1': 'Taiko',
-             '2': 'CtB',
-             '3': 'osu!mania',
+OSU_MODES = {0: 'osu!',
+             1: 'Taiko',
+             2: 'CtB',
+             3: 'osu!mania',
             }
 OSU_MAP_STATUS = {'-2': 'Graveyard',
                   '-1': 'WIP',
@@ -30,6 +30,11 @@ RANK_EMOTES = {'D': '<:Drank:327169368003837953>',
                'XH': '<:XHrank:327169369782091777>',
               }
 OSU_BASE_URL = 'https://osu.ppy.sh'
+
+RANK_IMAGE_REGEX = re.compile(r"<img src='/images/([^ ]+)_small\.png")
+RANK_REGEX = re.compile(r'rank #\d+')
+BEATMAP_URL_REGEX = re.compile(r"<a href='/b/(.*)'>(.*)</a>")
+MODE_REGEX = re.compile(r'\(.*\)$')
 
 class Osu:
     '''
@@ -55,31 +60,28 @@ class Osu:
         Check OSU_MODES to know what number is for what mode
         '''
 
-        if user:
-            key = self.config["api_key"]
-            url = f'{OSU_BASE_URL}/api/get_user?k={key}&u={user}&m={mode}&event_days=31'
-            async with self.session.get(url) as resp:
-                data = await resp.json()
-
-            if data:
-                return data[0]
-            else:
-                return {}
-        else:
+        if not user:
             return {}
+
+        key = self.config["api_key"]
+        url = f'{OSU_BASE_URL}/api/get_user?k={key}&u={user}&m={mode}&event_days=31'
+        async with self.session.get(url) as resp:
+            data = await resp.json()
+
+        return data[0] if data else {}
 
     def create_user_embed(self, user, mode=0):
         ''' Creates an embed about that user for that mode '''
 
         # Convert to numbers so they can be formatted nicely
         pp_raw = float(user['pp_raw'])
-        pp_rank = int(user["pp_rank"])
-        pp_country = int(user["pp_country_rank"])
+        pp_rank = int(user['pp_rank'])
+        pp_country = int(user['pp_country_rank'])
         acc = float(user['accuracy'])
         level = float(user['level'])
-        playcount = int(user["playcount"])
-        ranked_score = int(user["ranked_score"])
-        total_score = int(user["total_score"])
+        playcount = int(user['playcount'])
+        ranked_score = int(user['ranked_score'])
+        total_score = int(user['total_score'])
 
         desc = (f'Rank: #{pp_rank:,} ({pp_raw:.2f}pp)\n'
                 f'Country Rank: #{pp_country:,} ({user["country"]})\n'
@@ -96,7 +98,7 @@ class Osu:
                               url=url,
                               colour=16738740)
 
-        embed.set_author(name=f'User Info ({OSU_MODES[str(mode)]})')
+        embed.set_author(name=f'User Info ({OSU_MODES[mode]})')
         embed.set_thumbnail(url=f'https://a.ppy.sh/{user["user_id"]}')
 
         # Add recent score to embed
@@ -104,12 +106,12 @@ class Osu:
             recent = user['events'][0]['display_html']
 
             # Find the rank they got
-            rank = re.search(r"<img src='/images/(.+)_small.png'/>", recent)
-            rank = RANK_EMOTES[rank[1]]
-            number = re.search(r"rank #\d+", recent)[0]
-            beatmap = re.search(r"<a href='/b/(.*)'>(.*)</a>", recent)
-            beatmap = f'[{beatmap[2]}](https://osu.ppy.sh/b/{beatmap[1]})'
-            mode = re.search(r"\(.*\)$", recent)[0]
+            match = RANK_IMAGE_REGEX.search(recent)
+            rank = RANK_EMOTES[match[1]]
+            number = RANK_REGEX.search(recent)[0]
+            match = BEATMAP_URL_REGEX.search(recent)
+            beatmap = f'[{beatmap[2]}]({OSU_BASE_URL}/b/{beatmap[1]}'
+            mode = MODE_REGEX.search(recent)[0]
             embed.add_field(name='Recent:', value=f'{rank} Achieved {number} on {beatmap} {mode}')
 
         return embed
