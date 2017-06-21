@@ -60,6 +60,7 @@ class Animestuff:
     def __init__(self, bot):
         self.bot = bot
         self.config = utils.check_cog_config(self, 'config.json', default=DEFAULT)
+        self.session = aiohttp.ClientSession()
         # Variables of subbedchannels, people that want notifs
         # And airing today anime and ids for all airing
         self.subbed_channels = utils.check_cog_config(self, 'subbed_channels.json', default={'channels': []})
@@ -81,6 +82,7 @@ class Animestuff:
         ''' Unload function for when it is unloaded
         '''
         # Cancel all background tasks
+        self.session.close()
         self.token_refresher.cancel()
         self.daily_anime_grabber.cancel()
         self.next_airing_sender.cancel()
@@ -104,9 +106,8 @@ class Animestuff:
 
         while True:
             # Request token
-            async with aiohttp.ClientSession() as aioclient:
-                async with aioclient.post(auth_url, data=auth_data) as resp:
-                    data = await resp.json()
+            async with self.session.post(auth_url, data=auth_data) as resp:
+                data = await resp.json()
 
             # Save token and wait untill it expires
             self.token = data['access_token']
@@ -120,9 +121,8 @@ class Animestuff:
         params = {'access_token': self.token}
 
         # Make request
-        async with aiohttp.ClientSession() as aioclient:
-            async with aioclient.get(request_url, params=params) as resp:
-                data = await resp.json()
+        async with self.session.get(request_url, params=params) as resp:
+            data = await resp.json()
         return data
 
     async def get_mal_anime_info(self, anime):
@@ -134,10 +134,9 @@ class Animestuff:
 
         try:
             # Request information
-            async with aiohttp.ClientSession() as aioclient:
-                async with aioclient.get(url, auth=auth) as resp:
-                    data = await resp.text()
-                    tree = et.fromstring(data)
+            async with self.session.get(url, auth=auth) as resp:
+                data = await resp.text()
+                tree = et.fromstring(data)
 
             l = []
             for entries in tree:
@@ -172,9 +171,8 @@ class Animestuff:
                          }
 
                 # Make request
-                async with aiohttp.ClientSession() as aioclient:
-                    async with aioclient.get(request_url, params=params) as resp:
-                        data = await resp.json()
+                async with self.session.get(request_url, params=params) as resp:
+                    data = await resp.json()
 
                 # Add anime found to list, increase page number, and set page_number_found
                 animes += data
@@ -280,8 +278,8 @@ class Animestuff:
                     self.airing_today[i]['airing']['countdown'] = round(countdown.total_seconds())
 
             self.airing_today = sorted(self.airing_today,
-                                       key=lambda x: (x['airing']['countdown'] is None,
-                                                      x['airing'].get('countdown')))
+                                    key=lambda x: (x['airing']['countdown'] is None,
+                                                    x['airing'].get('countdown')))
 
             # Get first anime in list
             anime = self.airing_today[0]
@@ -308,9 +306,9 @@ class Animestuff:
 
                 timestamp = self.now()
                 embed = discord.Embed(type='rich',
-                                      colour=10057145,
-                                      description=desc,
-                                      timestamp=timestamp)
+                                    colour=10057145,
+                                    description=desc,
+                                    timestamp=timestamp)
 
                 embed.set_author(name='Just Released:')
 
@@ -320,7 +318,7 @@ class Animestuff:
                 embed.set_thumbnail(url=anime['image_url_lge'])
 
                 # Add links to embed
-                aid = anime[0]['id']
+                aid = anime['id']
                 links = f'[Anilist](https://anilist.co/anime/{aid})'
                 if mal_data:
                     mid = mal_data[0]['id']
@@ -328,7 +326,7 @@ class Animestuff:
                 embed.add_field(name='Links:', value=links)
 
                 dm_msg = (f'Type **@{self.bot.user.name} anime notify '
-                          f'{anime["id"]}** to get DM notifications for this anime')
+                        f'{anime["id"]}** to get DM notifications for this anime')
 
                 embed.add_field(name='DM Notification:', value=dm_msg)
                 embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
