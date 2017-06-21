@@ -18,6 +18,12 @@ DEFAULT = {"anilist": {"clientID": "", "clientSecret": ""},
 ANILIST_ICON = 'https://anilist.co/img/logo_al.png'
 MAL_ICON = 'https://myanimelist.cdn-dena.com/images/faviconv5.ico'
 
+BREAK_REGEX = re.compile(r'<br(?: /)?>', re.IGNORECASE)
+BOLD_REGEX = re.compile(r'\[b/?\]')
+ITALICS_REGEX = re.compile(r'\[i/?\]')
+UNDERLINE_REGEX = re.compile(r'\[u/?\]')
+STRIKETHROUGH_REGEX = re.compile(r'\[s/?\]')
+
 def clean_synopsis(synopsis):
     '''
     Cleans a synopsis to replace certain characters
@@ -25,7 +31,7 @@ def clean_synopsis(synopsis):
     '''
 
     # Remove <br /> so it prints just a new line
-    synopsis = synopsis.replace('<br />', '')
+    synopsis = BREAK_REGEX.sub('', synopsis)
 
     # Convert html formating with correct characters
     synopsis = synopsis.replace('&mdash;', '—')
@@ -36,22 +42,11 @@ def clean_synopsis(synopsis):
     synopsis = synopsis.replace('&quot;', '"')
     synopsis = synopsis.replace('&#039;', "'")
 
-    # Replace Bold/Strong with markdown
-    synopsis = synopsis.replace('[b]', "**")
-    synopsis = synopsis.replace('[/b]', "**")
-
-    # Replace italic/em with markdown
-    synopsis = synopsis.replace('[i]', "*")
-    synopsis = synopsis.replace('[/i]', "*")
-
-    # Replace Strikethrough with markdown
-    synopsis = synopsis.replace('[s]', "~~")
-    synopsis = synopsis.replace('[/s]', "~~")
-
-    # Replace Underline with markdown
-    synopsis = synopsis.replace('[u]', "__")
-    synopsis = synopsis.replace('[/u]', "__")
-
+    # Replace style with markdown
+    synopsis = BOLD_REGEX.sub('**', synopsis)
+    synopsis = ITALICS_REGEX.sub('*', synopsis)
+    synopsis = UNDERLINE_REGEX.sub('__', synopsis)
+    synopsis = STRIKETHROUGH_REGEX.sub('~~', synopsis)
 
     return synopsis
 
