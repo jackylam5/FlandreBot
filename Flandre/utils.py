@@ -22,10 +22,24 @@ class Cogdisable:
             with open(f'{__package__}/data/disabled_cogs.json', 'w') as file:
                 json.dump({}, file, indent=4, sort_keys=True)
 
-    @commands.command()
+    @commands.group(name='cog')
     @commands.guild_only()
     @permissions.check_admin()
-    async def disablecog(self, ctx, cog_name: str):
+    async def _cog(self, ctx):
+        '''
+        Group of commands to cog actions.
+        Such as enable and disable
+        '''
+
+        if ctx.invoked_subcommand is None:
+            pages = await send_cmd_help(self.bot, ctx)
+            for page in pages:
+                await ctx.send(page)
+
+    @_cog.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def disable(self, ctx, cog_name: str):
         '''
         Disables the cog given for the guild so it can not be used
         '''
@@ -61,10 +75,10 @@ class Cogdisable:
         else:
             await ctx.send("You can't disable that cog it is needed")
 
-    @commands.command()
+    @_cog.command()
     @commands.guild_only()
     @permissions.check_admin()
-    async def enablecog(self, ctx, cog_name: str):
+    async def enable(self, ctx, cog_name: str):
         '''
         Enables the cog given for the guild so it can be used again
         '''
@@ -95,9 +109,9 @@ class Cogdisable:
         else:
             await ctx.send("That cog hasn't been loaded or isn't vaild")
 
-    @commands.command()
+    @_cog.command()
     @commands.guild_only()
-    async def listcogs(self, ctx):
+    async def show(self, ctx):
         '''
         Lists the cogs showing what ones are disabled for the guild
         '''
