@@ -12,13 +12,13 @@ OSU_MODES = {0: 'osu!',
              2: 'CtB',
              3: 'osu!mania',
             }
-OSU_MAP_STATUS = {'-2': 'Graveyard',
-                  '-1': 'WIP',
-                  '0': 'Pending',
-                  '1': 'Ranked',
-                  '2': 'Approved',
-                  '3': 'Qualified',
-                  '4': 'Loved',
+OSU_MAP_STATUS = {-2: 'Graveyard',
+                  -1: 'WIP',
+                  0: 'Pending',
+                  1: 'Ranked',
+                  2: 'Approved',
+                  3: 'Qualified',
+                  4: 'Loved',
                  }
 RANK_EMOTES = {'D': '<:Drank:327169368003837953>',
                'C': '<:Crank:327169368578326548>',
@@ -119,6 +119,7 @@ class Osu:
     # Standard mode
     @commands.group(name='osu')
     @commands.cooldown(60, 60.0, type=commands.BucketType.default)
+
     async def _osu(self, ctx):
         '''
         osu! commands
