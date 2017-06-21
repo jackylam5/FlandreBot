@@ -8,7 +8,7 @@ from .. import permissions, utils
 OSU_MODES = {'0': 'osu!',
              '1': 'Taiko',
              '2': 'CtB',
-             '3': 'osu!mania'
+             '3': 'osu!mania',
             }
 OSU_MAP_STATUS = {'-2': 'Graveyard',
                   '-1': 'WIP',
@@ -16,7 +16,7 @@ OSU_MAP_STATUS = {'-2': 'Graveyard',
                   '1': 'Ranked',
                   '2': 'Approved',
                   '3': 'Qualified',
-                  '4': 'Loved'
+                  '4': 'Loved',
                  }
 OSU_BASE_URL = 'https://osu.ppy.sh'
 
@@ -50,7 +50,7 @@ class Osu:
         else:
             return {}
 
-    
+
     @commands.group(name='osu')
     @commands.cooldown(60, 60.0, type=commands.BucketType.default)
     async def _osu(self, ctx):
@@ -68,7 +68,7 @@ class Osu:
     @_osu.command(name='user')
     async def osu_user(self, ctx):
         ''' Show basic user info for standard '''
-        
+
 
     @_osu.group(name='mania')
     async def _mania(self, ctx):
