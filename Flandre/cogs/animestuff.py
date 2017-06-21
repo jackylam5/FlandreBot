@@ -50,6 +50,13 @@ def clean_synopsis(synopsis):
 
     return synopsis
 
+def now():
+    ''' Gets the current time in the Japanese timezone (GMT+9)
+    '''
+
+    tz = datetime.timezone(datetime.timedelta(hours=9))
+    return datetime.datetime.now(tz)
+
 class Anime:
     '''
     This holds all the infomation we need about a anime
@@ -96,10 +103,6 @@ class Animestuff:
         self.daily_anime_grabber = self.bot.loop.create_task(self.daily_anime_task())
         self.next_airing_sender = self.bot.loop.create_task(self.next_airing_task())
         self.hourly_notify = self.bot.loop.create_task(self.hourly_notifyer_task())
-
-    @staticmethod
-    def now():
-        return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
 
     def __unload(self):
         ''' Unload function for when it is unloaded
@@ -181,7 +184,7 @@ class Animestuff:
             page = 0 # Page number for api request
             page_number_found = 40 # Number of anime found (if < 40 found we have them all)
             # Current year
-            year = str(self.now().year)
+            year = str(now().year)
             animes = []
 
             while page_number_found == 40:
@@ -225,7 +228,7 @@ class Animestuff:
             self.bot.logger.info(log_msg)
 
             # Get current date and reset airing today
-            today = self.now()
+            today = now()
             midnight_tomorrow = today + datetime.timedelta(days=1)
             midnight_tomorrow = midnight_tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
             self.airing_today = []
@@ -264,7 +267,7 @@ class Animestuff:
                     desc += (f'[ID: {anime["id"]}] {anime["title_romaji"]} '
                              f'[{anime["airing"]["next_episode"]}/{total_ep}]\n')
 
-                timestamp = self.now()
+                timestamp = now()
                 embed = discord.Embed(type='rich',
                                       colour=10057145,
                                       description=desc,
@@ -280,8 +283,8 @@ class Animestuff:
                         await subbed_channel.send(embed=embed)
 
             # Wait for the next day
-            next_day = self.now() + datetime.timedelta(days=1)
-            time_left = next_day.replace(hour=0, minute=2, second=0, microsecond=0) - self.now()
+            next_day = now() + datetime.timedelta(days=1)
+            time_left = next_day.replace(hour=0, minute=2, second=0, microsecond=0) - now()
             await asyncio.sleep(round(time_left.total_seconds()))
 
     async def next_airing_task(self):
@@ -294,7 +297,7 @@ class Animestuff:
             self.anime_to_be_released.clear()
 
             # Recalculate countdown
-            time_now = self.now()
+            time_now = now()
             for i, anime in enumerate(self.airing_today.copy()):
                 if anime['airing']['countdown'] != None:
                     countdown = parse(anime['airing']['time']) - time_now
@@ -327,7 +330,7 @@ class Animestuff:
                 desc = (f'Episode **{anime["airing"]["next_episode"]}** of '
                         f'**{anime["title_romaji"]} ({anime["type"]})**')
 
-                timestamp = self.now()
+                timestamp = now()
                 embed = discord.Embed(type='rich',
                                     colour=10057145,
                                     description=desc,
@@ -385,14 +388,14 @@ class Animestuff:
         ''' Checks every hour (on the hour) and post if anything is airing in that hour '''
 
         # Wait for the next exact hour
-        next_hour = self.now() + datetime.timedelta(hours=1)
-        time_left = next_hour.replace(minute=0, second=0, microsecond=0) - self.now()
+        next_hour = now() + datetime.timedelta(hours=1)
+        time_left = next_hour.replace(minute=0, second=0, microsecond=0) - now()
 
         await asyncio.sleep(round(time_left.total_seconds()))
 
         while True:
             airing_soon = []
-            time_now = self.now()
+            time_now = now()
             # Get all anime airing within the hour seconds <= 3660 but more that a min away
             for anime in self.airing_today:
                 if anime['airing']['countdown'] != None:
@@ -406,7 +409,7 @@ class Animestuff:
                 # Create description
                 desc = ''
                 for i, anime in enumerate(airing_soon):
-                    countdown = parse(anime['airing']['time']) - self.now()
+                    countdown = parse(anime['airing']['time']) - now()
                     countdown = str(countdown).split('.')[0]
 
                     # Tidy up if unknown eps
@@ -420,7 +423,7 @@ class Animestuff:
                         )
 
                 # Create embed
-                timestamp = self.now()
+                timestamp = now()
                 embed = discord.Embed(type='rich',
                                       colour=10057145,
                                       description=desc,
@@ -436,8 +439,8 @@ class Animestuff:
                         await subbed_channel.send(embed=embed)
 
             # Wait for the next exact hour
-            next_hour = self.now() + datetime.timedelta(hours=1)
-            time_left = next_hour.replace(minute=0, second=0, microsecond=0) - self.now()
+            next_hour = now() + datetime.timedelta(hours=1)
+            time_left = next_hour.replace(minute=0, second=0, microsecond=0) - now()
 
             await asyncio.sleep(round(time_left.total_seconds()))
 
@@ -501,7 +504,7 @@ class Animestuff:
                 cr_link = link['url']
                 break
 
-        timestamp = self.now()
+        timestamp = now()
         anime_embed = discord.Embed(type='rich', colour=10057145, timestamp=timestamp)
         anime_embed.set_author(name='Airing next:')
         anime_embed.set_thumbnail(url=next_airing['image_url_lge'])
@@ -519,7 +522,7 @@ class Animestuff:
         anime_embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
 
         # Get airing time
-        countdown = parse(next_airing['airing']['time']) - self.now()
+        countdown = parse(next_airing['airing']['time']) - now()
         countdown = str(countdown).split('.')[0]
 
         # Tidy up if unknown eps
@@ -632,7 +635,7 @@ class Animestuff:
                 desc += (f'[ID: {anime["id"]}] {anime["title_romaji"]} '
                          f'[{anime["airing"]["next_episode"]}/{total_ep}]')
 
-        timestamp = self.now()
+        timestamp = now()
         embed = discord.Embed(type='rich',
                               colour=10057145,
                               description=desc,
@@ -670,7 +673,7 @@ class Animestuff:
                     cr_link = link['url']
                     break
 
-            timestamp = self.now()
+            timestamp = now()
             anime_embed = discord.Embed(type='rich', colour=10057145, timestamp=timestamp)
             anime_embed.set_author(name='Anime Info:')
             anime_embed.set_thumbnail(url=anime_info['image_url_lge'])
@@ -688,7 +691,7 @@ class Animestuff:
 
             anime_embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
             # Get airing time
-            countdown = parse(anime_info['airing']['time']) - self.now()
+            countdown = parse(anime_info['airing']['time']) - now()
             countdown = str(countdown).split('.')[0]
 
             # Tidy up if unknown eps
