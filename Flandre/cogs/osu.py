@@ -79,9 +79,10 @@ class Osu:
         playcount = int(user['playcount'])
         ranked_score = int(user['ranked_score'])
         total_score = int(user['total_score'])
+        flag = f':flag_{user["country"].lower()}:'
 
         desc = (f'Rank: #{pp_rank:,} ({pp_raw:.2f}pp)\n'
-                f'Country Rank: #{pp_country:,} ({user["country"]})\n'
+                f'Country Rank: #{pp_country:,} {flag}\n'
                 f'Accuracy: {acc:.2f}%\n'
                 f'Level: {level:.2f}\n'
                 f'Playcount: {playcount:,}\n'
