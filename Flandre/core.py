@@ -7,11 +7,13 @@ Written by jackylam5 & maware
 '''
 
 import datetime
+import asyncio
 import json
 import logging
 from logging.handlers import RotatingFileHandler
 import sys
 from os import listdir
+from random import choice
 
 import discord
 from discord.ext import commands
@@ -120,6 +122,30 @@ class Bot(commands.AutoShardedBot):
         else:
             return super().run(self.config['token'])
 
+    async def change_game(self):
+        '''
+        Change the game name every to a joke every 20 mins
+        Only shows the joke for 1 min
+        '''
+
+        show_config = True
+        choices = ['Help Jacky has us trapped in his basement',
+                   'Atem loves anime and directx',
+                   'What are you doing onii-chan?',
+                   'What are we going to do on the bed?',
+                   'That\'ll be our little secret.',
+                   'You know me, I gotta put in a big tree.',
+                   'Gotta give him a friend. Like I always say \'everyone needs a friend\'']
+        while True:
+            if show_config:
+                await self.change_presence(game=discord.Game(name=self.config['game']))
+                show_config = False
+                await asyncio.sleep(1200)
+            else:
+                await self.change_presence(game=discord.Game(name=choice(choices)))
+                show_config = True
+                await asyncio.sleep(60)
+
     async def on_ready(self):
         ''' When bot has fully logged on
         Log bots username and ID
@@ -131,7 +157,7 @@ class Bot(commands.AutoShardedBot):
                           f'{self.user.name} ({self.user.id}) using {self.shard_count} shards'))
 
         # Change the bots game to what is in the config
-        await self.change_presence(game=discord.Game(name=self.config['game']))
+        self.change_game_task = self.loop.create_task(self.change_game())
 
         # Check for data and cog foders
         utils.check_core_folders(self.logger)
@@ -203,6 +229,12 @@ class Bot(commands.AutoShardedBot):
         elif isinstance(error, commands.errors.BadArgument):
             # Tell the user there was a bad argument
             await ctx.send('Arguement error')
+
+        elif isinstance(error, commands.errors.CommandOnCooldown):
+            # Tell the user there was a bad argument
+            mention = ctx.author.mention
+            await ctx.send((f'{mention}: Command is on cooldown. '
+                            f'Try again in **{round(error.retry_after)}s**'))
 
         else:
             # Log any other errors
