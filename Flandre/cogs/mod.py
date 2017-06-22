@@ -375,31 +375,20 @@ class Mod:
     @commands.guild_only()
     async def text(self, ctx, text: str, number: int = 1):
         '''
-        Deletes the last X messages containing the text specified
-        Double quotes are needed for the text string
+        Deletes messages containing the text given within X messages
 
         Example: cleanup text "Test" 5
         '''
 
-        message = ctx.message
-        deleted = 0
+        def check(message):
+            ''' Check if the text is in the message '''
+            return text.lower() in message.content.lower()
 
         try:
-            while number > 0:
-                async for log_message in ctx.channel.history(limit=10, before=message):
-                    if text.lower() in log_message.content.lower():
-                        reason = f'Cleanup text: {text} by {ctx.author.name}'
-                        self.clean_up_messages.append(log_message.id)
-                        await log_message.delete(reason=reason)
-                        await asyncio.sleep(0.25)
-                        number -= 1
-                        message = log_message
-                        deleted += 1
-                    if number == 0:
-                        break
+            await ctx.channel.purge(limit=number, check=check)
+            await ctx.send('Cleanup Done!')
 
             # Log in the clean up in log_channel if set up
-            send_message = False
             log_channel = None
             if str(ctx.guild.id) in self.message_channels:
                 send_message = True
@@ -410,8 +399,7 @@ class Mod:
 
             if send_message:
                 desc = (f'Channel: {ctx.channel.mention}\n'
-                        f'Text: {text}\n'
-                        f'Amount: {deleted}')
+                        f'Text: {text}\n')
                 embed = discord.Embed(type='rich', description=desc)
                 embed.set_author(name='Cleanup Log')
                 embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
@@ -427,29 +415,20 @@ class Mod:
     @commands.guild_only()
     async def user(self, ctx, user: discord.Member, number: int = 1):
         '''
-        Deletes the last X messages from specified user
+        Deletes all the messages from the user in the last X messages
 
         Example:
         cleanup user @name 2
         cleanup user name 2
         '''
 
-        message = ctx.message
-        deleted = 0
+        def check(message):
+            ''' Check if the text is in the message '''
+            return user is message.author
 
         try:
-            while number > 0:
-                async for log_message in ctx.channel.history(limit=10, before=message):
-                    if log_message.author.id == user.id:
-                        reason = f'Cleanup user: {user.display_name} by {ctx.author.name}'
-                        self.clean_up_messages.append(log_message.id)
-                        await log_message.delete(reason=reason)
-                        await asyncio.sleep(0.25)
-                        number -= 1
-                        message = log_message
-                        deleted += 1
-                    if number == 0:
-                        break
+            await ctx.channel.purge(limit=number, check=check)
+            await ctx.send('Cleanup Done!')
 
             # Log in the clean up in log_channel if set up
             send_message = False
@@ -463,8 +442,7 @@ class Mod:
 
             if send_message:
                 desc = (f'Channel: {ctx.channel.mention}\n'
-                        f'From: {user.name}#{user.discriminator}\n'
-                        f'Amount: {deleted}')
+                        f'From: {user.name}#{user.discriminator}\n')
                 embed = discord.Embed(type='rich', description=desc)
                 embed.set_author(name='Cleanup Log')
                 embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
