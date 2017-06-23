@@ -30,6 +30,10 @@ RANK_EMOTES = {'D': '<:Drank:327169368003837953>',
                'XH': '<:XHrank:327169369782091777>',
               }
 OSU_BASE_URL = 'https://osu.ppy.sh'
+OSU_REQUESTS = {'user': '{0}/api/get_user?k={1}&u={2}&m={3}&event_days=31',
+                'top': '{0}/api/get_user_best?k={1}&u={2}&m={3}&limit=5',
+                'beatmap': '{0}/api/get_beatmaps?k={1}&b={2}&m={3}',
+               }
 
 USER_RECENT_REGEX = re.compile(r"<img src='\/images\/([A-Za-z]+)_small\.png'\/>\s*<b>\s*<a href='\/u\/\d+'>([^<]+)<\/a>\s*<\/b>\s*achieved rank #(\d+) on <a href='\/b\/([0-9]+\?m=[0-9])'>([^<]+)<\/a>\s*\(([^\(]+)\)")
 
@@ -51,48 +55,22 @@ class Osu:
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
 
-    async def get_osu_user_info(self, user, mode=0):
+    async def get_osu_data(self, search, mode=0, *, request_type='user'):
         '''
-        Makes a request to the osu! api to get user info
-        Check OSU_MODES to know what number is for what mode
+        Gets the data from the osu using the request_typoe given and getting the url
+        from the OSU_REQUESTS dict useing that type.
+        Supports 'user', 'top', and 'beatmap'
         '''
 
-        if not user:
+        if not search:
             return {}
 
         key = self.config["api_key"]
-        url = f'{OSU_BASE_URL}/api/get_user?k={key}&u={user}&m={mode}&event_days=31'
-        async with self.session.get(url) as resp:
-            data = await resp.json()
-
-        return data[0] if data else {}
-
-    async def get_osu_user_top(self, user, mode=0):
-        ''' Gets the users top 5 scores'''
-
-        if not user:
-            return {}
-
-        key = self.config["api_key"]
-        url = f'{OSU_BASE_URL}/api/get_user_best?k={key}&u={user}&m={mode}&limit=5'
+        url = OSU_REQUESTS[request_type].format(OSU_BASE_URL, key, search, mode)
         async with self.session.get(url) as resp:
             data = await resp.json()
 
         return data if data else {}
-
-    async def get_osu_beatmap(self, beatmap, mode=0):
-        ''' Gets beatmap info from the id given '''
-
-        if not beatmap:
-            return {}
-
-        key = self.config["api_key"]
-        url = f'{OSU_BASE_URL}/api/get_beatmaps?k={key}&b={beatmap}&m={mode}'
-        async with self.session.get(url) as resp:
-            data = await resp.json()
-
-        return data if data else {}
-
 
     def create_user_embed(self, user, mode=0):
         ''' Creates an embed about that user for that mode '''
@@ -151,7 +129,7 @@ class Osu:
         embed.set_thumbnail(url=f'https://a.ppy.sh/{scores[0]["user_id"]}')
 
         for score in scores:
-            beatmap = await self.get_osu_beatmap(score['beatmap_id'], mode=mode)
+            beatmap = await self.get_osu_data(score['beatmap_id'], mode=mode, request_type='beatmap')
             beatmap = beatmap[0]
 
             title = f'{beatmap["title"]} [{beatmap["version"]}]'
@@ -193,9 +171,10 @@ class Osu:
     @_osu.command(name='user')
     async def osu_user(self, ctx, *, name: str):
         ''' Show basic user info for standard '''
-        user = await self.get_osu_user_info(name)
+        user = await self.get_osu_data(name)
 
         if user:
+            user = user[0]
             embed = self.create_user_embed(user)
             await ctx.send(embed=embed)
         else:
@@ -205,7 +184,7 @@ class Osu:
     @commands.cooldown(1, 10.0, type=commands.BucketType.default)
     async def osu_top(self, ctx, *, name: str):
         ''' Show basic user info for standard '''
-        top_scores = await self.get_osu_user_top(name)
+        top_scores = await self.get_osu_data(name, request_type='top')
 
         if top_scores:
             embed = await self.create_top_embed(top_scores, name)
@@ -226,9 +205,10 @@ class Osu:
     @_mania.command(name='user')
     async def mania_user(self, ctx, *, name: str):
         ''' Show basic user info for mania '''
-        user = await self.get_osu_user_info(name, 3)
+        user = await self.get_osu_data(name, 3)
 
         if user:
+            user = user[0]
             embed = self.create_user_embed(user, 3)
             await ctx.send(embed=embed)
         else:
@@ -238,7 +218,7 @@ class Osu:
     @commands.cooldown(1, 10.0, type=commands.BucketType.default)
     async def mania_top(self, ctx, *, name: str):
         ''' Show basic user info for mania '''
-        top_scores = await self.get_osu_user_top(name, 3)
+        top_scores = await self.get_osu_data(name, 3, request_type='top')
 
         if top_scores:
             embed = await self.create_top_embed(top_scores, name, 3)
@@ -259,9 +239,10 @@ class Osu:
     @_taiko.command(name='user')
     async def taiko_user(self, ctx, *, name: str):
         ''' Show basic user info for taiko '''
-        user = await self.get_osu_user_info(name, 1)
+        user = await self.get_osu_data(name, 1)
 
         if user:
+            user = user[0]
             embed = self.create_user_embed(user, 1)
             await ctx.send(embed=embed)
         else:
@@ -271,7 +252,7 @@ class Osu:
     @commands.cooldown(1, 10.0, type=commands.BucketType.default)
     async def taiko_top(self, ctx, *, name: str):
         ''' Show basic user info for taiko '''
-        top_scores = await self.get_osu_user_top(name, 1)
+        top_scores = await self.get_osu_data(name, 1, request_type='top')
 
         if top_scores:
             embed = await self.create_top_embed(top_scores, name, 1)
@@ -292,9 +273,10 @@ class Osu:
     @_ctb.command(name='user')
     async def ctb_user(self, ctx, *, name: str):
         ''' Show basic user info for ctb '''
-        user = await self.get_osu_user_info(name, 2)
+        user = await self.get_osu_data(name, 2)
 
         if user:
+            user = user[0]
             embed = self.create_user_embed(user, 2)
             await ctx.send(embed=embed)
         else:
@@ -304,7 +286,7 @@ class Osu:
     @commands.cooldown(1, 10.0, type=commands.BucketType.default)
     async def ctb_top(self, ctx, *, name: str):
         ''' Show basic user info for ctb '''
-        top_scores = await self.get_osu_user_top(name, 2)
+        top_scores = await self.get_osu_data(name, 2, request_type='top')
 
         if top_scores:
             embed = await self.create_top_embed(top_scores, name, 2)
