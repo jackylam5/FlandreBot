@@ -134,7 +134,6 @@ class Osu:
             match = USER_RECENT_REGEX.match(recent)
             if match is not None:
                 rank = RANK_EMOTES[match[1]]
-                username = match[2]
                 number = match[3]
                 beatmap = f'[{match[5]}]({OSU_BASE_URL}/b/{match[4]})'
                 mode = match[6]
@@ -160,12 +159,17 @@ class Osu:
             total_score = int(score['score'])
             page_link = f'{OSU_BASE_URL}/b/{score["beatmap_id"]}&m={mode}'
             direct_link = f'osu://dl/{beatmap["beatmapset_id"]}'
+            if beatmap['max_combo'] is None:
+                max_combo = 'x combo'
+            else:
+                max_combo = f'/{beatmap["max_combo"]} combo'
+
             info = (f'{RANK_EMOTES[score["rank"]]} '
                     f'**{total_score:,} {pp_raw:.2f}pp** '
                     f'`{score["count300"]}/{score["count100"]}/'
                     f'{score["count50"]}/{score["countmiss"]}` '
-                    f'**{score["maxcombo"]}/{beatmap["max_combo"]}** '
-                    f'[Link]({page_link}) [osu!direct]({direct_link})')
+                    f'**{score["maxcombo"]}{max_combo}**\n'
+                    f'[osu!page]({page_link}) [osu!direct]({direct_link})')
 
             embed.add_field(name=title, value=info, inline=False)
 
