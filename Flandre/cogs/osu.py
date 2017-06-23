@@ -117,7 +117,7 @@ class Osu:
                 f'Total Score: {total_score:,}')
 
         title = f'{user["username"]}'
-        url = f'{OSU_BASE_URL}u/{user["user_id"]}'
+        url = f'{OSU_BASE_URL}/u/{user["user_id"]}'
         embed = discord.Embed(description=desc,
                               title=title,
                               url=url,
@@ -144,7 +144,7 @@ class Osu:
     async def create_top_embed(self, scores, name, mode=0):
         ''' Creates the embed for the top 5 scores '''
 
-        url = f'{OSU_BASE_URL}u/{scores[0]["user_id"]}'
+        url = f'{OSU_BASE_URL}/u/{scores[0]["user_id"]}'
 
         embed = discord.Embed(title=name, url=url, colour=16738740)
         embed.set_author(name=f'Top Scores ({OSU_MODES[mode]})')
