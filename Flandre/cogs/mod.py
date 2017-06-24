@@ -3,22 +3,21 @@ import asyncio
 import logging
 from io import StringIO, BytesIO
 import re
-from string import punctuation as asciipunct
 
 import discord
 from discord.ext import commands
 
 from .. import permissions, utils
 
-def clean_text(content):
-    ''' Removes discord markdown '''
-    content = content.replace('`', '')
-    content = content.replace('*', '')
-    content = content.replace('~', '')
-    content = content.replace('_', '')
-    content = content.replace('​', '')
+CLEANUP_REG = re.compile(r'[`*~_\u200B]')
 
-    return content
+def find_filtered_word(word, content):
+    ''' Looks the the word given in the content '''
+
+    cleaned_message = CLEANUP_REG.sub('', content)
+    found = re.search(f'\\b{word}\\b', cleaned_message, re.IGNORECASE)
+
+    return found
 
 class BanLogger:
     '''
@@ -930,8 +929,7 @@ class Mod:
 
                         # Check server wide filter first
                         for word in self.filter[guild_id]['server']:
-                            cleaned_message = clean_text(message.content)
-                            found = re.search(f'\\b{word}\\b', cleaned_message, re.IGNORECASE)
+                            found = find_filtered_word(word, message.content)
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 self.filtered_messages.append(message.id)
@@ -945,8 +943,7 @@ class Mod:
                             # Check if channel is in filter if server wide did not trigger
                             if channel_id in self.filter[guild_id]['channels']:
                                 for word in self.filter[guild_id]['channels'][channel_id]:
-                                    cleaned_message = clean_text(message.content)
-                                    found = re.search(f'\\b{word}\\b', cleaned_message, re.IGNORECASE)
+                                    found = find_filtered_word(word, message.content)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
                                         self.filtered_messages.append(message.id)
@@ -987,8 +984,7 @@ class Mod:
 
                         # Check server wide filter first
                         for word in self.filter[guild_id]['server']:
-                            cleaned_message = clean_text(after.content)
-                            found = re.search(f'\\b{word}\\b', cleaned_message, re.IGNORECASE)
+                            found = find_filtered_word(word, after.content)
                             # If re found the word delete it and tell the user
                             if found is not None:
                                 self.filtered_messages.append(after.id)
@@ -1001,8 +997,7 @@ class Mod:
                             # Check if channel is in filter if server wide did not trigger
                             if channel_id in self.filter[guild_id]['channels']:
                                 for word in self.filter[guild_id]['channels'][channel_id]:
-                                    cleaned_message = clean_text(after.content)
-                                    found = re.search(f'\\b{word}\\b', cleaned_message, re.IGNORECASE)
+                                    found = find_filtered_word(word, after.content)
                                     # If re found the word delete it and tell the user
                                     if found is not None:
                                         self.filtered_messages.append(after.id)
