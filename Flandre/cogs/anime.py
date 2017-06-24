@@ -36,11 +36,65 @@ class Show:
         countdown = parse(self.release_time) - time_now
         self.countdown = round(countdown.total_seconds())
 
+class LruCache:
+    def __init__(self, retriever, capacity=128):
+        self.cache = {}
+        self.retriever = retriever
+        self.atime = 0
+        self.capacity = capacity
+
+    def get(self, id):
+        '''
+        Get the object with the given ID from the cache,
+        if it exists, otherwise it calls the retrieval
+        function to fetch it.
+        '''
+
+        self.atime += 1
+        try:
+            entry = self.cache[id]
+            entry[1] = self.atime
+            return entry[0]
+        except KeyError:
+            if len(self.cache) >= self.capacity:
+                self._evict()
+            item = self.retriever(id)
+            self.cache[id] = [item, self.atime]
+            return item
+
+    def _evict(self):
+        '''
+        Removes the least recently used item
+        from the cache. This method asumes
+        a non-empty cache.
+        '''
+
+        min_id = None
+        min_time = -1
+        for id, [item, atime] in self.cache.items():
+            if min_id is None or min_time > atime:
+                min_id = id
+                min_time = atime
+        del self.cache[min_id]
+
 class AnimePool:
 
     def __init__(self):
-        self.airing = []
-        self.airing_today = []
+        self.cache = LruCache(self._fetch_anime)
+
+        self.airing = {}
+        self.airing_today = {}
+
+    def get(self, id):
+        return self.cache.get(id)
+
+    def _fetch_anime(self, id):
+        '''
+        Fetches an anime from the MAL API
+        using the given ID.
+        '''
+
+        raise NotImplementedError
 
 class Anime:
     '''
