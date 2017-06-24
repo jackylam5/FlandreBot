@@ -39,7 +39,8 @@ class Show:
 class AnimePool:
 
     def __init__(self):
-        pass
+        self.airing = []
+        self.airing_today = []
 
 class Anime:
     '''
