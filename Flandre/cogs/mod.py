@@ -14,6 +14,7 @@ CLEANUP_REG = re.compile('[`*~_\u200B]')
 def find_filtered_word(word, content):
     ''' Looks the the word given in the content '''
 
+    word = re.escape(word)
     cleaned_message = CLEANUP_REG.sub('', content)
     found = re.search(f'\\b{word}\\b', cleaned_message, re.IGNORECASE)
 
