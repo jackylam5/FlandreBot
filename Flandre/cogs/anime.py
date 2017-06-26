@@ -568,72 +568,6 @@ class Anime:
             self.bot.logger.info((f'{ctx.channel.name} ({ctx.channel.id}) '
                                   'has been made a subbed channel'))
 
-    @anime.command(name='next')
-    async def anime_next(self, ctx):
-        ''' Displays info on the next airing anime '''
-
-        next_airing = self.anime_pool.airing_today[0]
-
-        # Get MAL link
-        mal_data = await self.anime_pool.get_mal_info(next_airing.title)
-
-        # Get crunchyroll link
-        page_info = await self.anime_pool.get_page_info(next_airing.id)
-        cr_link = ''
-
-        for link in page_info['external_links']:
-            if link['site'].lower() == 'crunchyroll':
-                cr_link = link['url']
-                break
-
-        timestamp = now()
-        anime_embed = discord.Embed(type='rich', colour=10057145, timestamp=timestamp)
-        anime_embed.set_author(name='Airing next:')
-        anime_embed.set_thumbnail(url=next_airing.image_url)
-
-        # Check if english title is different from romaji title
-        if next_airing.english_title != next_airing.title:
-            title = (f'{next_airing.title} ({next_airing.type})\n'
-                     f'Known as **{next_airing.english_title}**')
-
-            anime_embed.add_field(name='Title', value=title, inline=False)
-        else:
-            title = f'{next_airing.title} ({next_airing.type})'
-            anime_embed.add_field(name='Title', value=title, inline=False)
-
-        anime_embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
-
-        # Get airing time
-        countdown = next_airing.release_time - now()
-        countdown = str(countdown).split('.')[0]
-
-        # Tidy up if unknown eps
-        total_ep = int(next_airing.total_episodes)
-        if total_ep == 0:
-            total_ep = '-'
-
-        ep_info = (f'#**{next_airing.next_episode}**/**{total_ep}**'
-                   f'\nAirs in: **{countdown}**')
-
-        anime_embed.add_field(name='Episode', value=ep_info, inline=False)
-
-        # Add links to embed
-        aid = next_airing.id
-        links = f'[Anilist](https://anilist.co/anime/{aid})'
-        if mal_data:
-            mid = mal_data[0]['id']
-            links += f' [MAL](https://myanimelist.net/anime/{mid})'
-        if cr_link:
-            links += f' [Crunchyroll]({cr_link})'
-        anime_embed.add_field(name='Links:', value=links)
-
-        dm_msg = (f'Type **@{self.bot.user.name} anime notify {next_airing.id}** '
-                  'to get DM notifications for this anime')
-
-        anime_embed.add_field(name='DM Notification:', value=dm_msg)
-
-        await ctx.send(embed=anime_embed)
-
     @anime.command()
     async def notify(self, ctx, anime_id: str):
         ''' Gets the bot to DM you the anime from id when it comes out '''
@@ -713,7 +647,7 @@ class Anime:
                 desc += (f'{str(anime)} - AIRED\n')
 
             else:
-                desc += f'{str(anime)}\n'
+                desc += f'{str(anime)}'
 
         timestamp = now()
         embed = discord.Embed(type='rich',
@@ -727,19 +661,20 @@ class Anime:
         await ctx.send(embed=embed)
     
     @anime.command()
-    async def info(self, ctx, *, title: str):
-        ''' Get anilist info from romaji title '''
+    async def airinfo(self, ctx, *, title: str=None):
+        ''' Get anilist info from romaji title will show the next airing if none given '''
 
-        anime_found = False
         anime_id = None
+        if title is None:
+            if self.anime_pool.airing_today[0].countdown is not None:
+                anime_id = self.anime_pool.airing_today[0].id
+        else:
+            for aniid, anititle in self.anime_pool.all_airing_ids.items():
+                if anititle.lower() == title.lower():
+                    anime_id = aniid
+                    break
 
-        for aniid, anititle in self.anime_pool.all_airing_ids.items():
-            if anititle.lower() == title.lower():
-                anime_found = True
-                anime_id = aniid
-                break
-
-        if anime_found:
+        if anime_id is not None:
             anime_info = await self.anime_pool.get_page_info(anime_id)
 
             # Get MAL link
@@ -800,9 +735,12 @@ class Anime:
             anime_embed.add_field(name='DM Notification:', value=dm_msg)
             await ctx.send(embed=anime_embed)
         else:
-            await ctx.send((f"{ctx.author.mention}, "
-                            "I couldn't find that anime. "
-                            "Make sure you are using the romaji title for this command please"))
+            if title is None:
+                await ctx.send(f'{ctx.author.mention}, Every thing has finished airing today')
+            else:
+                await ctx.send((f"{ctx.author.mention}, "
+                                "I couldn't find that anime in the list of airing anime. "
+                                "Make sure you are using the romaji title for this command please"))
     
     @anime.command()
     async def search(self, ctx, *, anime: str):
