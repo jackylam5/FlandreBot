@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from .. import permissions, utils
 
-CLEANUP_REG = re.compile('[`*~_\u200B]')
+CLEANUP_REG = re.compile('[`*~_\u200B]+')
 
 def find_filtered_word(word, content):
     ''' Looks the the word given in the content '''
