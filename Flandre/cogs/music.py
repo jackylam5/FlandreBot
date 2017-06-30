@@ -375,21 +375,25 @@ class MusicPlayer:
     async def change_volume(self, ctx, percent):
         ''' Change the volume of the bot '''
 
-        if int(percent) < 0 or int(percent) > 100:
-            # Send user error message for invalid percentage
-            err_msg = (f'{ctx.author.mention}, '
-                       'Volume is done by percentage between 0%  and 100%, '
-                       'Please pick a vaild percentage')
-
-            await ctx.send(err_msg)
-
+        if ctx.author.voice is None:
+            await ctx.channel.send((f'{ctx.author.mention}, '
+                                    'You need to be in a voice channel to change the volume'))
         else:
-            # Change percentage to a valid number for ffmpeg or avconv
-            self.volume = int(percent) / 100
-            # Change volume
-            self._vc.source.volume = self.volume
-            # Send volume has been changed message
-            await ctx.send(f'{ctx.author.mention}, Volume has been changed to: **{percent}%**')
+            if int(percent) < 0 or int(percent) > 100:
+                # Send user error message for invalid percentage
+                err_msg = (f'{ctx.author.mention}, '
+                            'Volume is done by percentage between 0%  and 100%, '
+                            'Please pick a vaild percentage')
+
+                await ctx.send(err_msg)
+
+            else:
+                # Change percentage to a valid number for ffmpeg or avconv
+                self.volume = int(percent) / 100
+                # Change volume
+                self._vc.source.volume = self.volume
+                # Send volume has been changed message
+                await ctx.send(f'{ctx.author.mention}, Volume has been changed to: **{percent}%**')
 
     async def pause_music(self, ctx):
         ''' Pauses the music '''
