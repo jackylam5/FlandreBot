@@ -277,7 +277,7 @@ class AnimePool:
                     if anime['airing'] is not None:
                         self.all_airing_ids[str(anime['id'])] = anime['title_romaji']
                         
-                        airdate = anime['airing']['time']
+                        airdate = parse(anime['airing']['time'])
                         # Check if it airs today
                         if airdate <= midnight_tomorrow:
                             self.airing_today.append(Show(anime))
