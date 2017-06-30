@@ -202,7 +202,7 @@ class Bot(commands.AutoShardedBot):
 
         elif isinstance(error, commands.errors.BadArgument):
             # Tell the user there was a bad argument
-            await ctx.send('Arguement error')
+            await ctx.send('Ya fooked up m8')
 
         else:
             # Log any other errors
