@@ -336,7 +336,7 @@ class MusicPlayer:
 
         if ctx.author.voice is None:
             await ctx.channel.send((f'{ctx.author.mention}, '
-                                    'You need to be in a voice channel so I can connect to it'))
+                                    'You need to be in a voice channel to skip the song'))
         else:
             # Check if there is a music player and it is playing
             if self._vc.is_playing() or self._vc.is_paused():
@@ -992,15 +992,16 @@ class Music:
                             del self.musicplayers[str(guild.id)]
                         self.bot.logger.info(f'Removed Music Player for {guild.name} ({guild.id})')
             else:
-                total_votes = len(voice.skips)
-                skips_needed = round(len(voice.channel.members) * 0.6)
-                # It the number of enough to pass skip
-                if total_votes >= skips_needed:
-                    voice.skips.clear()
-                    voice._vc.stop()
-                    channel = voice.text_channel
-                    await channel.send('A user has left the channel, and the skips needed now match'
-                                       ' the current number of skips!! Skipping song')
+                if str(guild.id) in self.musicplayers:
+                    total_votes = len(voice.skips)
+                    skips_needed = round(len(voice.channel.members) * 0.6)
+                    # It the number of enough to pass skip
+                    if total_votes >= skips_needed:
+                        voice.skips.clear()
+                        voice._vc.stop()
+                        channel = voice.text_channel
+                        await channel.send('A user has left the channel, and the skips needed now match'
+                                        ' the current number of skips!! Skipping song')
 
 
 
