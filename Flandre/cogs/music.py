@@ -358,7 +358,7 @@ class MusicPlayer:
 
                     else:
                         # Tell user they have voted to skip and how many left is needed
-                        await ctx.send(f'{ctx.author.mention} has voted to skip [{total_votes}/3].')
+                        await ctx.send(f'{ctx.author.mention} has voted to skip [{total_votes}/{skips_needed}].')
 
                 else:
                     # Tell user they have already skipped
@@ -621,7 +621,7 @@ class Music:
             asyncio.ensure_future(player.disconnect(self.bot.user, force=True, reloaded=True))
             self.bot.logger.info(f'Forcefully deleted {guild} music player')
             del self.musicplayers[guild]
-    
+
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
 
@@ -742,7 +742,7 @@ class Music:
 
     @commands.command()
     @commands.guild_only()
-    async def add(self, ctx, link: str):
+    async def add(self, ctx, *, link: str):
         ''' Add command <Youtube Link/Soundcloud Link/Search term> '''
 
         # Check if the have a music player
