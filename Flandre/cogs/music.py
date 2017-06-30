@@ -347,9 +347,10 @@ class MusicPlayer:
                 if ctx.author.id not in self.skips:
                     self.skips.add(ctx.author.id)
                     total_votes = len(self.skips)
+                    skips_needed = round(len(self._vc.channel.members) * 0.6)
 
                     # It the number of enough to pass skip
-                    if total_votes >= 3 or len(self._vc.channel.members) < 4:
+                    if total_votes >= skips_needed:
                         self.skips.clear()
                         self._vc.stop()
                         await ctx.send((f'{ctx.author.mention} has voted to skip.\n'
@@ -986,6 +987,18 @@ class Music:
                         if str(guild.id) in self.musicplayers:
                             del self.musicplayers[str(guild.id)]
                         self.bot.logger.info(f'Removed Music Player for {guild.name} ({guild.id})')
+            else:
+                total_votes = len(voice.skips)
+                skips_needed = round(len(voice.channel.members) * 0.6)
+                # It the number of enough to pass skip
+                if total_votes >= skips_needed:
+                    voice.skips.clear()
+                    voice._vc.stop()
+                    channel = voice.text_channel
+                    await channel.send('A user has left the channel, and the skips needed now match'
+                                       ' the current number of skips!! Skipping song')
+
+
 
 def setup(bot):
     ''' Setup to add cog to bot'''
