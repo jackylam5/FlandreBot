@@ -146,7 +146,6 @@ class AnimePool:
         self.mal_cache = LruCache(self._fetch_mal_info)
         self.page_cache = LruCache(self._fetch_page_info)
 
-        self.airing = []
         self.airing_today = []
         self.all_airing_ids = {}
         self.anime_to_be_released = asyncio.Event()
@@ -264,13 +263,24 @@ class AnimePool:
                     page += 1
                     page_number_found = len(data)
 
-                # Remove hentai as it has no airing info for some reason and add to airong list
+                
+                # Get current date and reset airing today
+                today = now()
+                midnight_tomorrow = today + datetime.timedelta(days=1)
+                midnight_tomorrow = midnight_tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+                self.airing_today = []
+                
+                # Remove hentai as it has no airing info
+                # Then add the title mapped to the id for nofitications
+                # Then check if it is airing today
                 for anime in animes:
                     if anime['airing'] is not None:
-                        self.airing.append(Show(anime))
-
-                # Put all airing animes in a dict with id as key and title as value
-                self.all_airing_ids = {str(k.id): k.title for k in self.airing}
+                        self.all_airing_ids[str(anime['id'])] = anime['title_romaji']
+                        
+                        airdate = anime['airing']['time']
+                        # Check if it airs today
+                        if airdate <= midnight_tomorrow:
+                            self.airing_today.append(Show(anime))
 
                 # Remove any anime that is no longer airing
                 removed_counter = 0 # Remove counter for log
@@ -280,23 +290,10 @@ class AnimePool:
                         removed_counter += 1
 
                 # Save notifications.json
-                utils.save_cog_config(self.cog, 'notifications.json', self.cog.notifications)
-                log_msg = (f'Found {len(self.airing)} currently airing anime. '
+                log_msg = (f'Found {len(self.all_airing_ids)} currently airing anime. '
                            f'Removed {removed_counter} no longer airing anime from notification file')
                 self.cog.bot.logger.info(log_msg)
-
-                # Get current date and reset airing today
-                today = now()
-                midnight_tomorrow = today + datetime.timedelta(days=1)
-                midnight_tomorrow = midnight_tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
-                self.airing_today = []
-
-                # Get all anime that airs today
-                for anime in self.airing:
-                    airdate = anime.release_time
-                    # Check if it airs today
-                    if airdate <= midnight_tomorrow:
-                        self.airing_today.append(anime)
+                utils.save_cog_config(self.cog, 'notifications.json', self.cog.notifications)
 
                 # Double Check for dups
                 self.airing_today = list(set(self.airing_today))
@@ -354,8 +351,7 @@ class AnimePool:
                 time_now = now()
                 for i, anime in enumerate(self.airing_today.copy()):
                     if anime.countdown != None:
-                        countdown = anime.release_time - time_now
-                        self.airing_today[i].countdown = round(countdown.total_seconds())
+                        anime.recalculate_countdown()
 
                 self.airing_today = sorted(self.airing_today,
                                            key=lambda x: (x.countdown is None, x.countdown))
