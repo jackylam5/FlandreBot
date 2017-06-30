@@ -254,10 +254,12 @@ class MusicPlayer:
                         # Check if playlist was downloaded
                         if 'entries' in result:
                             queued = 0
+                            duration = 0
                             for song in result['entries']:
                                 # Get song info
                                 if song is not None:
                                     self.queue.append(Song(ctx.author, song))
+                                    duration += song['duration']
                                     queued += 1
 
                                 else:
@@ -266,9 +268,12 @@ class MusicPlayer:
 
                                     self.bot.logger.warning(log_msg)
 
+                            # Make the duration readable
+                            mins, secs = divmod(duration, 60)
+
                             # If search term added as search always returns as it was in a playlist
                             if search:
-                                msg = ':notes: Queued: `{0}` [Songs in queue: {1}]'
+                                msg = ':notes: Queued: `{0}` Duration: `{1} mins {2} seconds` [Songs in queue: {3}]'
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
 
@@ -278,12 +283,12 @@ class MusicPlayer:
 
                                 else:
                                     title = result['entries'][0]['title'].replace('`', "'")
-                                    await ctx.send(msg.format(title, len(self.queue)))
+                                    await ctx.send(msg.format(title, mins, secs, len(self.queue)))
 
                             else:
                                 # Tell user how many songs were added
                                 if queued > 0:
-                                    msg = 'Queued: `{0}` songs [Songs in queue: {1}]'
+                                    msg = 'Queued: `{0}` songs Duration: `{1} mins {2} seconds` [Songs in queue: {1}]'
 
                                 else:
                                     msg = 'No songs were added'
@@ -291,7 +296,7 @@ class MusicPlayer:
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
 
-                                await ctx.send(msg.format(str(queued), len(self.queue)))
+                                await ctx.send(msg.format(str(queued), mins, secs, len(self.queue)))
 
                         else:
                             # Single song
@@ -300,13 +305,16 @@ class MusicPlayer:
                                 # Add song to queue
                                 self.queue.append(Song(ctx.author, result))
 
+                                # Make the duration readable
+                                mins, secs = divmod(result['duration'], 60)
+
                                 # Tell the user the song has been queued
-                                msg = ':notes: Queued: `{0}` [Songs in queue: {1}]'
+                                msg = ':notes: Queued: `{0}` Duration: `{1} mins {2} seconds` [Songs in queue: {1}]'
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
 
                                 title = result['title'].replace('`', "'")
-                                await ctx.send(msg.format(title, len(self.queue)))
+                                await ctx.send(msg.format(title, mins, secs, len(self.queue)))
 
                             else:
                                 # Tell the user if it couldn't be added
@@ -538,6 +546,19 @@ class MusicPlayer:
                     # Display number of other songs
                     left = len(self.queue[5:])
                     desc += f'And **{left}** more'
+
+                total_dur = 0
+                for song in self.queue:
+                    total_dur += song.duration
+
+                # Get queue total duration
+                tmins, tsecs = divmod(total_dur, 60)
+                thours, tmins = divmod(tmins, 60)
+
+                if thours != 0:
+                    desc += f'\n Total Duration: `{thours:02d}:{tmins:02d}:{tsecs:02d}`'
+                else:
+                    desc += f'\n Total Duration: `{tmins:02d}:{tsecs:02d}`'
 
             # Send embed
             qembed = discord.Embed(type='rich', colour=discord.Colour(5577355), description=desc)
