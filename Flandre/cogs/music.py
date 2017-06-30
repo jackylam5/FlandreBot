@@ -334,39 +334,43 @@ class MusicPlayer:
     async def skip(self, ctx, force=False):
         ''' Start the vote skip or force if done by admin using force skip command '''
 
-        # Check if there is a music player and it is playing
-        if self._vc.is_playing() or self._vc.is_paused():
-            # Check if forced
-            if force:
-                self.skips.clear()
-                self._vc.stop()
-                await ctx.send(f'{ctx.author.mention} has forced skipped the song')
-
-            else:
-                # Check user hasn't already skipped
-                if ctx.author.id not in self.skips:
-                    self.skips.add(ctx.author.id)
-                    total_votes = len(self.skips)
-                    skips_needed = round(len(self._vc.channel.members) * 0.6)
-
-                    # It the number of enough to pass skip
-                    if total_votes >= skips_needed:
-                        self.skips.clear()
-                        self._vc.stop()
-                        await ctx.send((f'{ctx.author.mention} has voted to skip.\n'
-                                        'The vote skip has passed.'))
-
-                    else:
-                        # Tell user they have voted to skip and how many left is needed
-                        await ctx.send(f'{ctx.author.mention} has voted to skip [{total_votes}/{skips_needed}].')
+        if ctx.author.voice is None:
+            await ctx.channel.send((f'{ctx.author.mention}, '
+                                    'You need to be in a voice channel so I can connect to it'))
+        else:
+            # Check if there is a music player and it is playing
+            if self._vc.is_playing() or self._vc.is_paused():
+                # Check if forced
+                if force:
+                    self.skips.clear()
+                    self._vc.stop()
+                    await ctx.send(f'{ctx.author.mention} has forced skipped the song')
 
                 else:
-                    # Tell user they have already skipped
-                    await ctx.send(f'{ctx.author.mention}, You have already voted to skip')
+                    # Check user hasn't already skipped
+                    if ctx.author.id not in self.skips:
+                        self.skips.add(ctx.author.id)
+                        total_votes = len(self.skips)
+                        skips_needed = round(len(self._vc.channel.members) * 0.6)
 
-        else:
-            # Send message saying there is nothing to skip
-            await ctx.send(f'{ctx.author.mention}, There is nothing playing to be skipped')
+                        # It the number of enough to pass skip
+                        if total_votes >= skips_needed:
+                            self.skips.clear()
+                            self._vc.stop()
+                            await ctx.send((f'{ctx.author.mention} has voted to skip.\n'
+                                            'The vote skip has passed.'))
+
+                        else:
+                            # Tell user they have voted to skip and how many left is needed
+                            await ctx.send(f'{ctx.author.mention} has voted to skip [{total_votes}/{skips_needed}].')
+
+                    else:
+                        # Tell user they have already skipped
+                        await ctx.send(f'{ctx.author.mention}, You have already voted to skip')
+
+            else:
+                # Send message saying there is nothing to skip
+                await ctx.send(f'{ctx.author.mention}, There is nothing playing to be skipped')
 
     async def change_volume(self, ctx, percent):
         ''' Change the volume of the bot '''
