@@ -80,7 +80,7 @@ class Show:
         return hash(self.id) ^ hash(self.title) ^ hash(self.next_episode)
 
     def __repr__(self):
-        return f'(Anime - ID: {self.id}, Title: {self.title}, Next: {self.next_episode})'
+        return f'<Anime - ID: {self.id}, Title: {self.title}, Next: {self.next_episode}>'
 
     def __str__(self):
         total_ep = int(self.total_episodes)
@@ -121,6 +121,12 @@ class LruCache:
             self.cache[id] = [item, self.atime]
             return item
 
+    def remove(self, id):
+        if id not in self.cache:
+            return
+        
+        del self.cache[id]
+    
     def _evict(self):
         '''
         Removes the least recently used item
@@ -277,12 +283,12 @@ class AnimePool:
                     if anime['airing'] is not None:
                         self.all_airing_ids[str(anime['id'])] = anime['title_romaji']
                         
-                        airdate = parse(anime['airing']['time'])
                         # Check if it airs today
+                        airdate = parse(anime['airing']['time'])
                         if airdate <= midnight_tomorrow:
                             self.airing_today.append(Show(anime))
 
-                # Remove any anime that is no longer airing
+                # Remove any anime that is no longer airing from notifications file
                 removed_counter = 0 # Remove counter for log
                 for notify_id in self.cog.notifications.copy():
                     if notify_id not in self.all_airing_ids:
@@ -295,7 +301,7 @@ class AnimePool:
                 self.cog.bot.logger.info(log_msg)
                 utils.save_cog_config(self.cog, 'notifications.json', self.cog.notifications)
 
-                # Double Check for dups
+                # Check for dups and remove them
                 self.airing_today = list(set(self.airing_today))
 
                 # Check if we have any airing
@@ -303,7 +309,7 @@ class AnimePool:
 
                     # Sort anime airing today by the countdown suppied by anilist
                     # Will be wrong when working with it but it tells us what should air first,
-                    # We will calculate the true time from the time given
+                    # We will calculate the true time from the time given later
                     # If it has aired it will be none but when we get it here it shouldn't be none
                     self.airing_today = sorted(self.airing_today,
                                                key=lambda x: (x.countdown is None,
@@ -422,6 +428,10 @@ class AnimePool:
 
                     # Set the anime in list countdown to None
                     self.airing_today[0].countdown = None
+
+                    # Remove the anime page from the cache as if it is not removed
+                    # It will show a negative release time as it has passed
+                    self.page_cache.remove(anime.id)
 
                 all_aired = True
                 for anime in self.airing_today:
