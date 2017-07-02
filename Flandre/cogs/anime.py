@@ -86,7 +86,7 @@ class Show:
         total_ep = int(self.total_episodes)
         if total_ep == 0:
             total_ep = '-'
-        return f'[ID: {self.id}] {self.title} [{self.next_episode}/{total_ep}]\n'
+        return f'[ID: {self.id}] {self.title} [{self.next_episode}/{total_ep}]'
 
 
     def recalculate_countdown(self, time_now):
@@ -208,6 +208,30 @@ class AnimePool:
 
         else:
             return {}
+    
+    def make_airing_embed(self):
+        '''
+        Makes a embed with everything that is airing
+        '''
+
+        desc = ''
+        for anime in self.airing_today:
+            if anime.countdown is None:
+                desc += f'{str(anime)} - AIRED\n'
+
+            else:
+                desc += f'{str(anime)}\n'
+
+        timestamp = now()
+        embed = discord.Embed(type='rich',
+                                colour=10057145,
+                                description=desc,
+                                timestamp=timestamp)
+
+        embed.set_author(name='Airing today:')
+        embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
+        
+        return embed
 
     async def get_token(self):
         ''' Background task to refresh anilist api token every hour '''
@@ -319,18 +343,7 @@ class AnimePool:
                     self.anime_to_be_released.set()
 
                     # Make an embed to tell users what airs today
-                    desc = ''
-                    for anime in self.airing_today:
-                        desc += str(anime)
-
-                    timestamp = now()
-                    embed = discord.Embed(type='rich',
-                                          colour=10057145,
-                                          description=desc,
-                                          timestamp=timestamp)
-
-                    embed.set_author(name='Airing today:')
-                    embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
+                    embed = self.make_airing_embed()
 
                     # Send Embed
                     if self.cog.subbed_channels:
@@ -357,7 +370,7 @@ class AnimePool:
                 time_now = now()
                 for i, anime in enumerate(self.airing_today.copy()):
                     if anime.countdown != None:
-                        anime.recalculate_countdown()
+                        anime.recalculate_countdown(time_now)
 
                 self.airing_today = sorted(self.airing_today,
                                            key=lambda x: (x.countdown is None, x.countdown))
@@ -516,6 +529,8 @@ class Anime:
         self.subbed_channels = utils.check_cog_config(self, 'subbed_channels.json', default={'channels': []})
         self.notifications = utils.check_cog_config(self, 'notifications.json')
         self.anime_pool = AnimePool(self)
+        self.mal_manga_cache = LruCache(self._fetch_mal_manga)
+
 
     def __unload(self):
         ''' Unload function for when it is unloaded
@@ -531,6 +546,92 @@ class Anime:
     async def __local_check(self, ctx):
         ''' The cog disabled check '''
         return utils.check_enabled(ctx)
+    
+    async def get_mal_manga(self, title):
+        return await self.mal_manga_cache.get(title)
+    
+    async def _fetch_mal_manga(self, title):
+        '''
+        Fetches an manga from the MAL API
+        using the given title.
+        '''
+
+        # Remove spaces for web request
+        manga = title.replace(' ', '_')
+        url = f'https://myanimelist.net/api/manga/search.xml?q={manga}'
+        auth = aiohttp.BasicAuth(self.config['mal']['username'], self.config['mal']['password'])
+
+        try:
+            # Request information
+            async with self.anime_pool.session.get(url, auth=auth) as resp:
+                data = await resp.text()
+                tree = et.fromstring(data)
+
+            return [i for i in [dict((info.tag, info.text) for info in entrys) for entrys in tree]]
+        except:
+            return []
+    
+    def make_mal_anime_embed(self, anime):
+        '''
+        Make a embed from the mal anime info given
+        '''
+
+        # Clean the synopsis then create the embed
+        desc = clean_synopsis(anime['synopsis'])
+        # Check if desc has more than one paragraph if so tell user to click title for more
+        if '\n' in desc:
+            desc = desc.split("\n")[0] + ' **... (Click title for more)**'
+
+        title = f'{anime["title"]} ({anime["type"]})'
+        url = f'https://myanimelist.net/anime/{anime["id"]}'
+
+        embed = discord.Embed(type='rich',
+                              colour=10057145,
+                              description=desc,
+                              title=title,
+                              url=url)
+
+        embed.add_field(name='Status', value=anime['status'])
+        embed.add_field(name='Episodes', value=anime['episodes'])
+        embed.add_field(name='Start Date', value=anime['start_date'])
+        embed.add_field(name='End Date', value=anime['end_date'])
+
+        # Set embed image and MAL image
+        embed.set_thumbnail(url=anime['image'])
+        embed.set_footer(text='Info from MAL', icon_url=MAL_ICON)
+
+        return embed
+    
+    def make_mal_manga_embed(self, manga):
+        '''
+        Make a embed from the mal manga info given
+        '''
+
+        # Clean the synopsis then create the embed
+        desc = clean_synopsis(manga['synopsis'])
+        # Check if desc has more than one paragraph if so tell user to click title for more
+        if '\n' in desc:
+            desc = desc.split("\n")[0] + ' **... (Click title for more)**'
+
+        title = f'{manga["title"]} ({manga["type"]})'
+        url = f'https://myanimelist.net/manga/{manga["id"]}'
+
+        embed = discord.Embed(type='rich',
+                              colour=10057145,
+                              description=desc,
+                              title=title,
+                              url=url)
+
+        embed.add_field(name='Status', value=manga['status'])
+        embed.add_field(name='Volumes/Chapters', value=f'{manga["volumes"]}/{manga["chapters"]}')
+        embed.add_field(name='Start Date', value=manga['start_date'])
+        embed.add_field(name='End Date', value=manga['end_date'])
+
+        # Set embed image and MAL image
+        embed.set_thumbnail(url=manga['image'])
+        embed.set_footer(text='Info from MAL', icon_url=MAL_ICON)
+
+        return embed
     
     @commands.group()
     async def anime(self, ctx):
@@ -583,6 +684,10 @@ class Anime:
         if anime_id in self.anime_pool.all_airing_ids:
             if str(anime_id) in self.notifications:
                 if ctx.author.id in self.notifications[str(anime_id)]:
+                    self.notifications[str(anime_id)].remove(ctx.author.id)
+                    if not self.notifications[str(anime_id)]:
+                        self.notifications.pop(str(anime_id))
+                    
                     already_notify = True
                 else:
                     self.notifications[str(anime_id)].append(ctx.author.id)
@@ -592,45 +697,12 @@ class Anime:
 
             anime = self.anime_pool.all_airing_ids[anime_id]
             if already_notify:
-                await ctx.send((f"{ctx.author.mention}, "
-                                f"I'm already notifying you when {anime} comes out!"))
+                await ctx.send((f"Okay {ctx.author.mention}, "
+                                f"I'll stop notifying you when **{anime}** comes out!"))
 
             else:
                 await ctx.send((f"Okay {ctx.author.mention}, "
-                                f"I'll notify you when {anime} comes out!"))
-
-            # Save notifications.json
-            utils.save_cog_config(self, 'notifications.json', self.notifications)
-
-        else:
-            await ctx.send((f"{ctx.author.mention}, "
-                            "There isn't an anime with that ID airing, Did you copy the ID right?"))
-
-    @anime.command()
-    async def stop(self, ctx, anime_id: str):
-        ''' Gets the bot to stop DMing you the anime from id when it comes out '''
-
-        # Check if the anime they asked for is airing
-        already_notify = True
-        if anime_id in self.anime_pool.all_airing_ids:
-            if str(anime_id) in self.notifications:
-                if ctx.author.id in self.notifications[str(anime_id)]:
-                    self.notifications[str(anime_id)].remove(ctx.author.id)
-                    if not self.notifications[str(anime_id)]:
-                        self.notifications.pop(str(anime_id))
-                else:
-                    already_notify = False
-            else:
-                already_notify = False
-
-            anime = self.anime_pool.all_airing_ids[anime_id]
-            if already_notify:
-                await ctx.send((f"Okay {ctx.author.mention}, "
-                                f"I'll stop notifying you when {anime} comes out!"))
-
-            else:
-                await ctx.send((f"{ctx.author.mention}, "
-                                f"I'll wasn't notifying you when {anime} came out!"))
+                                f"I'll notify you when **{anime}** comes out!"))
 
             # Save notifications.json
             utils.save_cog_config(self, 'notifications.json', self.notifications)
@@ -643,27 +715,7 @@ class Anime:
     async def airing(self, ctx):
         ''' Shows all anime airing today '''
 
-        desc = ''
-        for anime in self.anime_pool.airing_today:
-            # Tidy up if unknown eps
-            total_ep = int(anime.total_episodes)
-            if total_ep == 0:
-                total_ep = '-'
-            if anime.countdown is None:
-                desc += (f'{str(anime)} - AIRED\n')
-
-            else:
-                desc += f'{str(anime)}'
-
-        timestamp = now()
-        embed = discord.Embed(type='rich',
-                              colour=10057145,
-                              description=desc,
-                              timestamp=timestamp)
-
-        embed.set_author(name='Currently Airing Today:')
-        embed.set_footer(text='Info from Anilist', icon_url=ANILIST_ICON)
-
+        embed = self.anime_pool.make_airing_embed()
         await ctx.send(embed=embed)
     
     @anime.command()
@@ -757,31 +809,25 @@ class Anime:
         if mal_info:
             anime = mal_info[0]
 
-            # Clean the synopsis then create the embed
-            desc = clean_synopsis(anime['synopsis'])
-            # Check if desc has more than one paragraph if so tell user to click title for more
-            if '\n' in desc:
-                desc = desc.split("\n")[0] + ' **... (Click title for more)**'
+            embed = self.make_mal_anime_embed(anime)
 
-            title = f'{anime["title"]} ({anime["type"]})'
-            url = f'https://myanimelist.net/anime/{anime["id"]}'
+            await ctx.send(embed=embed)
 
-            anime_embed = discord.Embed(type='rich',
-                                        colour=10057145,
-                                        description=desc,
-                                        title=title,
-                                        url=url)
+        else:
+            await ctx.send("I couldn't find anything from MAL with that search")
+    
+    @commands.command()
+    async def manga(self, ctx, *, manga: str):
+        ''' Get info about a manga from MAL '''
 
-            anime_embed.add_field(name='Status', value=anime['status'])
-            anime_embed.add_field(name='Episodes', value=anime['episodes'])
-            anime_embed.add_field(name='Start Date', value=anime['start_date'])
-            anime_embed.add_field(name='End Date', value=anime['end_date'])
+        mal_info = await self.get_mal_manga(manga)
 
-            # Set embed image and MAL image
-            anime_embed.set_thumbnail(url=anime['image'])
-            anime_embed.set_footer(text='Info from MAL', icon_url=MAL_ICON)
+        if mal_info:
+            manga = mal_info[0]
 
-            await ctx.send(embed=anime_embed)
+            embed = self.make_mal_manga_embed(manga)
+
+            await ctx.send(embed=embed)
 
         else:
             await ctx.send("I couldn't find anything from MAL with that search")
@@ -793,43 +839,37 @@ class Anime:
 
         if message.channel.id in self.subbed_channels['channels']:
             # Find anime refs
-            found = re.findall('\{([\w :-]+)\}', message.content, re.IGNORECASE)
+            anime_found = re.findall('\{([\w :-]+)\}', message.content, re.IGNORECASE)
+            # Find manga refs
+            manga_found = re.findall('\[([\w :-]+)\]', message.content, re.IGNORECASE)
 
-            if found:
+            # If anime is found
+            if anime_found:
                 animes = []
                 # Get the MAL info for each anime
-                for anime in found:
+                for anime in anime_found:
                     mal_info = await self.anime_pool.get_mal_info(anime)
                     if mal_info:
                         animes.append(mal_info[0])
 
                 if animes:
                     for anime in animes:
-                        # Clean the synopsis then create the embed
-                        desc = clean_synopsis(anime['synopsis'])
-                        # Check if desc has more than one paragraph if so tell user to click title for more
-                        if '\n' in desc:
-                            desc = desc.split("\n")[0] + ' **... (Click title for more)**'
+                        embed = self.make_mal_anime_embed(anime)
+                        await message.channel.send(embed=embed)
+            
+            # If manga is found
+            if manga_found:
+                mangas = []
+                # Get the MAL info for each manga
+                for manga in manga_found:
+                    mal_info = await self.get_mal_manga(manga)
+                    if mal_info:
+                        mangas.append(mal_info[0])
 
-                        title = f'{anime["title"]} ({anime["type"]})'
-                        url = f'https://myanimelist.net/anime/{anime["id"]}'
-
-                        anime_embed = discord.Embed(type='rich',
-                                                    colour=10057145,
-                                                    description=desc,
-                                                    title=title,
-                                                    url=url)
-
-                        anime_embed.add_field(name='Status', value=anime['status'])
-                        anime_embed.add_field(name='Episodes', value=anime['episodes'])
-                        anime_embed.add_field(name='Start Date', value=anime['start_date'])
-                        anime_embed.add_field(name='End Date', value=anime['end_date'])
-
-                        # Set embed image and MAL image
-                        anime_embed.set_thumbnail(url=anime['image'])
-                        anime_embed.set_footer(text='Info from MAL', icon_url=MAL_ICON)
-
-                        await message.channel.send(embed=anime_embed)
+                if mangas:
+                    for manga in mangas:
+                        embed = self.make_mal_manga_embed(manga)
+                        await message.channel.send(embed=embed)
 
 def setup(bot):
     ''' Add cog to bot '''
