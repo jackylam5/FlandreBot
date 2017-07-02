@@ -92,7 +92,7 @@ class Show:
     def recalculate_countdown(self, time_now):
         ''' Recalculates the countdown from the current time '''
 
-        countdown = parse(self.release_time) - time_now
+        countdown = self.release_time - time_now
         self.countdown = round(countdown.total_seconds())
 
 class LruCache:
