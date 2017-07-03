@@ -89,6 +89,11 @@ ENV/
 .ropeproject
 
 # config file
-
 Flandre/config.json
+
+# Editor files
 .vscode/launch.json
+.*.swp
+*~
+*.bak
+
