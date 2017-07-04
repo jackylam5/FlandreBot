@@ -360,7 +360,7 @@ class AnimePool:
         ''' Gets the next airing episode and posts in subbed channels when it comes out '''
         # Wait for token
         await asyncio.sleep(1)
-
+        
         if self.token is not None:
             while True:
                 await self.anime_to_be_released.wait()
@@ -380,7 +380,7 @@ class AnimePool:
 
                 # If first element countdown is none all has aired
                 if anime.countdown != None:
-                    await asyncio.sleep(anime.cooldown)
+                    await asyncio.sleep(anime.countdown)
 
                     # Get anime page info for crunchyroll link
                     page_info = await self.get_page_info(anime.id)
