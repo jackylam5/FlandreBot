@@ -902,7 +902,7 @@ class Mod:
                 self.slowmode_file.pop(str(ctx.channel.id))
                 if ctx.channel.id in self.slowmode:
                     self.slowmode.pop(ctx.channel.id)
-                await ctx.send(':runner: This channel is no longer in slowmode')
+                await ctx.send(':rabbit2: This channel is no longer in slowmode')
                 utils.save_cog_config(self, 'slowmode.json', self.slowmode_file)
             else:
                 return
