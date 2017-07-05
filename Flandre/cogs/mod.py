@@ -899,9 +899,10 @@ class Mod:
         # Check if we are removing the slow mode
         if amount is None:
             if str(ctx.channel.id) in self.slowmode_file:
-                del self.slowmode_file[str(ctx.channel.id)]
-                del self.slowmode[ctx.channel.id]
-                await ctx.send('This channel is no longer in slowmode')
+                self.slowmode_file.pop(str(ctx.channel.id))
+                if ctx.channel.id in self.slowmode:
+                    self.slowmode.pop(ctx.channel.id)
+                await ctx.send(':runner: This channel is no longer in slowmode')
                 utils.save_cog_config(self, 'slowmode.json', self.slowmode_file)
             else:
                 return
@@ -913,8 +914,6 @@ class Mod:
 
                 self.slowmode_file[str(ctx.channel.id)]['amount'] = amount
                 self.slowmode_file[str(ctx.channel.id)]['rate'] = rate
-
-                print(self.slowmode_file)
 
                 await ctx.send(f':snail: Slowmode set at {amount} messages every {rate} seconds per user')
                 utils.save_cog_config(self, 'slowmode.json', self.slowmode_file)
@@ -979,8 +978,7 @@ class Mod:
             self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
         else:
             user = self.slowmode[channel.id][author.id]
-            
-            print(user)
+
             if time.time() >= user['timestamp']:
                 timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
                 self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
