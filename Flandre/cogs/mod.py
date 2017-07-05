@@ -960,34 +960,36 @@ class Mod:
         Will remove if reached
         '''
 
-        channel = message.channel
-        author = message.author
+        if isinstance(message.channel, discord.abc.GuildChannel):
+        
+            channel = message.channel
+            author = message.author
 
-        # Ignore Staff
-        if channel.permissions_for(author).manage_guild:
-            return
+            # Ignore Staff
+            if channel.permissions_for(author).manage_guild:
+                return
 
-        if str(channel.id) not in self.slowmode_file:
-            return
+            if str(channel.id) not in self.slowmode_file:
+                return
 
-        if channel.id not in self.slowmode:
-            self.slowmode[channel.id] = {}
+            if channel.id not in self.slowmode:
+                self.slowmode[channel.id] = {}
 
-        if author.id not in self.slowmode[channel.id]:
-            timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
-            self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
-        else:
-            user = self.slowmode[channel.id][author.id]
-
-            if time.time() >= user['timestamp']:
+            if author.id not in self.slowmode[channel.id]:
                 timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
                 self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
-
-            elif user['count'] >= self.slowmode_file[str(channel.id)]['amount']:
-                self.slowmode_messages.append(message.id)
-                await message.delete()
             else:
-                self.slowmode[channel.id][author.id]['count'] += 1
+                user = self.slowmode[channel.id][author.id]
+
+                if time.time() >= user['timestamp']:
+                    timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
+                    self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
+
+                elif user['count'] >= self.slowmode_file[str(channel.id)]['amount']:
+                    self.slowmode_messages.append(message.id)
+                    await message.delete()
+                else:
+                    self.slowmode[channel.id][author.id]['count'] += 1
 
     async def check_filter(self, message):
         ''' Check if the message contains a filtered word from a server '''
