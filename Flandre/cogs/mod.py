@@ -3,6 +3,7 @@ import asyncio
 import logging
 from io import StringIO, BytesIO
 import re
+import time
 
 import discord
 from discord.ext import commands
@@ -65,17 +66,20 @@ class Mod:
     def __init__(self, bot):
         self.bot = bot
         self.logging_channels = utils.check_cog_config(self, 'logging_channels.json')
-        self.message_channels = utils.check_cog_config(self, 'message_channels.json')
+        self.message_channels = utils.check_cog_config(self, 'message_channels.json') 
+        self.slowmode_file = utils.check_cog_config(self, 'slowmode.json')
+        self.slowmode = self.slowmode_file.copy()
         self.filter = utils.check_cog_config(self, 'filter.json')
         self.filtered_messages = []
         self.clean_up_messages = []
+        self.slowmode_messages = []
         self.ban_loggers = {}
         self.ban_log_check = self.bot.loop.create_task(self.ban_log_checker())
 
     def __unload(self):
         ''' Remove listeners '''
 
-        self.bot.remove_listener(self.check_filter, "on_message")
+        self.bot.remove_listener(self.message_checker, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
         self.bot.remove_listener(self.post_deleted_message, "on_message_delete")
         self.ban_loggers = {}
@@ -881,6 +885,40 @@ class Mod:
                             'Nothing is being filtered so there '
                             'is no point in setting a message right now'))
 
+    @commands.command(name='slowmode')
+    @commands.guild_only()
+    @permissions.check_mod()
+    async def slowmode_command(self, ctx, amount: int = None, rate: int = 10):
+        '''
+        Toggles slowmode for the channel.
+        It need a message amount and rate(seconds) with amount being the first argument.
+        Rate will default to ten seconds if not given.
+        If no amount given slowmode is disabled.
+        '''
+
+        # Check if we are removing the slow mode
+        if amount is None:
+            if str(ctx.channel.id) in self.slowmode_file:
+                self.slowmode_file.pop(str(ctx.channel.id))
+                self.slowmode.pop(ctx.channel.id, None)
+                await ctx.send(':rabbit2: This channel is no longer in slowmode')
+                utils.save_cog_config(self, 'slowmode.json', self.slowmode_file)
+            else:
+                return
+        else:
+            if amount > 0 and rate > 0:
+                if str(ctx.channel.id) not in self.slowmode_file:
+                    self.slowmode_file[str(ctx.channel.id)] = {}
+                    self.slowmode[ctx.channel.id] = {}
+
+                self.slowmode_file[str(ctx.channel.id)]['amount'] = amount
+                self.slowmode_file[str(ctx.channel.id)]['rate'] = rate
+
+                await ctx.send(f':snail: Slowmode set at {amount} messages every {rate} seconds per user')
+                utils.save_cog_config(self, 'slowmode.json', self.slowmode_file)
+            else:
+                await ctx.send('You can not set the rate or amount to 0!!')
+
     def filter_immune(self, message):
         ''' Check if user can not be filtered '''
 
@@ -891,7 +929,7 @@ class Mod:
             # Check if bot owner
             if message.author.id in self.bot.config['ownerid']:
                 return True
-            elif message.channel.permissions_for(message.author).manage_messages:
+            elif message.channel.permissions_for(message.author).manage_guild:
                 # Admin in server
                 return True
             elif message.channel.permissions_for(message.author).manage_channels:
@@ -899,6 +937,65 @@ class Mod:
                 return True
             else:
                 return False
+
+    async def message_checker(self, message):
+        '''
+        Check the message with the filter first
+        Then checks for slow mode
+        '''
+
+        if message.author.id == self.bot.user.id:
+            return
+
+        # Check the filter
+        filtered = await self.check_filter(message)
+        if not filtered:
+            await self.check_slowmode(message)
+
+    async def check_slowmode(self, message):
+        '''
+        Checks if slow mode is active
+        Then checks if a user has been sent the allowed amount of messages
+        Will remove if reached
+        '''
+
+        if isinstance(message.channel, discord.abc.GuildChannel):
+
+            channel = message.channel
+            author = message.author
+
+            # Check it is not a webhook
+            if type(author) != discord.User:
+
+                # Ignore Staff
+                if channel.permissions_for(author).manage_guild:
+                    return False
+
+                if str(channel.id) not in self.slowmode_file:
+                    return False
+
+                if channel.id not in self.slowmode:
+                    self.slowmode[channel.id] = {}
+
+                if author.id not in self.slowmode[channel.id]:
+                    timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
+                    self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
+                else:
+                    user = self.slowmode[channel.id][author.id]
+
+                    if time.time() >= user['timestamp']:
+                        timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
+                        self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
+                        return False
+                    elif user['count'] >= self.slowmode_file[str(channel.id)]['amount']:
+                        self.slowmode_messages.append(message.id)
+                        await message.delete()
+                        return True
+                    else:
+                        self.slowmode[channel.id][author.id]['count'] += 1
+                        return False
+
+        return False
 
     async def check_filter(self, message):
         ''' Check if the message contains a filtered word from a server '''
@@ -939,7 +1036,7 @@ class Mod:
                                 if msg is not None:
                                     msg = msg.replace('%user%', author.mention)
                                     await message.channel.send(msg)
-                                break
+                                return True
                         else:
                             # Check if channel is in filter if server wide did not trigger
                             if channel_id in self.filter[guild_id]['channels']:
@@ -953,7 +1050,9 @@ class Mod:
                                         if msg is not None:
                                             msg = msg.replace('%user%', author.mention)
                                             await message.channel.send(msg)
-                                        break
+                                        return True
+
+        return False
 
     async def check_edit_filter(self, before, after):
         ''' Check if the edited message contains a filtered word from a server '''
@@ -1019,6 +1118,10 @@ class Mod:
         if isinstance(message.channel, discord.abc.GuildChannel):
             if message.author != self.bot.user:
 
+                if message.id in self.slowmode_messages:
+                    self.slowmode_messages.remove(message.id)
+                    return
+
                 if message.author.id not in self.ban_loggers:
                     # Log in the deleteion in log_channel if set up
                     send_message = False
@@ -1055,7 +1158,7 @@ class Mod:
 def setup(bot):
     ''' Setup for bot to add cog '''
     cog = Mod(bot)
-    bot.add_listener(cog.check_filter, "on_message")
+    bot.add_listener(cog.message_checker, "on_message")
     bot.add_listener(cog.check_edit_filter, "on_message_edit")
     bot.add_listener(cog.post_deleted_message, "on_message_delete")
     bot.add_cog(cog)
