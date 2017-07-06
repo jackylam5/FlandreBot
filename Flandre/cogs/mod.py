@@ -887,7 +887,7 @@ class Mod:
 
     @commands.command(name='slowmode')
     @commands.guild_only()
-    @permissions.check_admin()
+    @permissions.check_mod()
     async def slowmode_command(self, ctx, amount: int = None, rate: int = 10):
         '''
         Toggles slowmode for the channel.
@@ -900,8 +900,7 @@ class Mod:
         if amount is None:
             if str(ctx.channel.id) in self.slowmode_file:
                 self.slowmode_file.pop(str(ctx.channel.id))
-                if ctx.channel.id in self.slowmode:
-                    self.slowmode.pop(ctx.channel.id)
+                self.slowmode.pop(ctx.channel.id, None)
                 await ctx.send(':rabbit2: This channel is no longer in slowmode')
                 utils.save_cog_config(self, 'slowmode.json', self.slowmode_file)
             else:
@@ -964,16 +963,16 @@ class Mod:
 
             channel = message.channel
             author = message.author
-            
+
             # Check it is not a webhook
-            if not isinstance(author, discord.User):
+            if type(author) != discord.User:
 
                 # Ignore Staff
                 if channel.permissions_for(author).manage_guild:
-                    return
+                    return False
 
                 if str(channel.id) not in self.slowmode_file:
-                    return
+                    return False
 
                 if channel.id not in self.slowmode:
                     self.slowmode[channel.id] = {}
@@ -987,12 +986,14 @@ class Mod:
                     if time.time() >= user['timestamp']:
                         timestamp = time.time() + self.slowmode_file[str(channel.id)]['rate']
                         self.slowmode[channel.id][author.id] = {'timestamp': timestamp, 'count': 1}
-
+                        return False
                     elif user['count'] >= self.slowmode_file[str(channel.id)]['amount']:
                         self.slowmode_messages.append(message.id)
                         await message.delete()
+                        return True
                     else:
                         self.slowmode[channel.id][author.id]['count'] += 1
+                        return False
 
     async def check_filter(self, message):
         ''' Check if the message contains a filtered word from a server '''
