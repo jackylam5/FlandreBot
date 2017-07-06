@@ -995,6 +995,8 @@ class Mod:
                         self.slowmode[channel.id][author.id]['count'] += 1
                         return False
 
+        return False
+
     async def check_filter(self, message):
         ''' Check if the message contains a filtered word from a server '''
 
