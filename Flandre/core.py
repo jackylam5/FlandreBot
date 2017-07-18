@@ -9,38 +9,16 @@ Written by jackylam5 & maware
 import datetime
 import json
 import logging
-from logging.handlers import RotatingFileHandler
+import os
 import sys
-from os import listdir
 
 import discord
 from discord.ext import commands
 
 from . import utils
-from .errors import LoginError, MissingConfigFile, CogDisabled
+from .errors import CogDisabled, LoginError, MissingConfigFile
 
-def make_logger():
-    ''' Make the logger for the bot
-    '''
-
-    # Make Flandre's logger
-    logger = logging.getLogger(__package__)
-    logger.setLevel(logging.DEBUG)
-
-    # Make file handler for log file
-    file_handler = RotatingFileHandler(filename=f'{__package__}.log',
-                                       maxBytes=5*1024*1024,
-                                       backupCount=5)
-
-    file_handler.setLevel(logging.DEBUG)
-
-    # Make the format for log file
-    fmt_msg = '%(asctime)s - %(name)s - %(levelname)s > [%(module)s.%(funcName)s] %(message)s'
-    formatter = logging.Formatter(fmt_msg)
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    return logger
+logger = logging.getLogger(__name__)
 
 class Bot(commands.AutoShardedBot):
     '''
@@ -51,13 +29,12 @@ class Bot(commands.AutoShardedBot):
         ''' Set up config and logging. Then set up the built-in discord bot '''
         self.config = None
         self.start_time = datetime.datetime.utcnow()
-        self.logger = make_logger()
         self.load_config()
 
         # Check if config has a prefix
         if self.config['prefix'] == '':
             self.config['prefix'] = '!'
-            self.logger.warining("Prefix in config was empty. Using '!' as the prefix")
+            logger.warining("Prefix in config was empty. Using '!' as the prefix")
 
         # Load the __init__ for commands.Bot with values in config
         super().__init__(command_prefix=commands.when_mentioned_or(self.config['prefix']),
@@ -76,11 +53,11 @@ class Bot(commands.AutoShardedBot):
         '''
         try:
             # Load config
-            with open(f'{__package__}/config.json', 'r') as config:
+            with open('Flandre/config.json', 'r') as config:
                 self.config = json.load(config)
         except (json.decoder.JSONDecodeError, IOError) as err:
             # If config file is missing tell user
-            print(f"[!] Config File ({__package__}/config.json) Missing")
+            print("[!] Config File (Flandre/config.json) Missing")
             print("\tReason: {0}".format(err))
 
             # Create new config file for user with defaults added in
@@ -94,15 +71,15 @@ class Bot(commands.AutoShardedBot):
                           'use_avconv': True
                          }
 
-            with open(f'{__package__}/config.json', 'w') as config:
+            with open('Flandre/config.json', 'w') as config:
                 json.dump(tempconfig, config, indent=4, sort_keys=True)
 
             # Tell user config file was made and also log it
-            print((f"A config file has been made for you ({__package__}/config.json). "
+            print(("A config file has been made for you (Flandre/config.json). "
                    "Please fill it out and restart the bot"))
 
-            self.logger.critical((f"Config File ({__package__}/config.json) "
-                                  "Missing. It has been remade for you"))
+            logger.critical(("Config File (Flandre/config.json) "
+                             "Missing. It has been remade for you"))
 
             # Raise MissingConfigFile to end the bot script
             raise MissingConfigFile(err)
@@ -115,7 +92,7 @@ class Bot(commands.AutoShardedBot):
         if self.config['token'] == '':
             err_msg = 'Token is empty please open the config file and add your Bots token'
             print(err_msg)
-            self.logger.critical(err_msg)
+            logger.critical(err_msg)
             raise LoginError()
         else:
             return super().run(self.config['token'])
@@ -127,42 +104,42 @@ class Bot(commands.AutoShardedBot):
         '''
 
         # Tell user bot has logged in with how many shards
-        self.logger.info(('Logged in as: '
-                          f'{self.user.name} ({self.user.id}) using {self.shard_count} shards'))
+        logger.info(('Logged in as: '
+                     f'{self.user.name} ({self.user.id}) using {self.shard_count} shards'))
 
         # Change the bots game to what is in the config
         await self.change_presence(game=discord.Game(name=self.config['game']))
 
         # Check for data and cog foders
-        utils.check_core_folders(self.logger)
+        utils.check_core_folders()
 
         # Load the owner reloader and Cogdisable
         self.add_cog(utils.Reloader(self))
-        self.logger.info('Loaded cog: Reloader')
+        logger.info('Loaded cog: Reloader')
         self.add_cog(utils.Cogdisable(self))
-        self.logger.info('Loaded cog: Cogdisable')
+        logger.info('Loaded cog: Cogdisable')
 
         # Load cogs
-        files = [file.replace('.py', '') for file in listdir(f'{__package__}/cogs')
+        files = [file.replace('.py', '') for file in os.listdir('Flandre/cogs')
                  if ".py" in file]
 
         if files:
             for file in files:
                 try:
-                    self.load_extension(f'{__package__}.cogs.{file}')
+                    self.load_extension(f'Flandre.cogs.{file}')
 
                 except Exception as err:
                     # Something made the loading fail
                     # So log it with reason and tell user to check it
-                    self.logger.critical(f'Load failed for {file}. Reason: {err}')
+                    logger.critical(f'Load failed for {file}. Reason: {err}')
                     continue
 
                 else:
-                    self.logger.info(f'Loaded cog: {file}')
+                    logger.info(f'Loaded cog: {file}')
         else:
             err_msg = "No python files found. Which means no commands found. Bot logged off"
             print(err_msg)
-            self.logger.critical(err_msg)
+            logger.critical(err_msg)
             await self.logout()
             sys.exit()
 
@@ -206,7 +183,7 @@ class Bot(commands.AutoShardedBot):
 
         else:
             # Log any other errors
-            self.logger.exception('Command "%s". Message "%s"',
-                                  ctx.command,
-                                  ctx.message.content,
-                                  exc_info=error.original)
+            logger.exception('Command "%s". Message "%s"',
+                             ctx.command,
+                             ctx.message.content,
+                             exc_info=error.original)
