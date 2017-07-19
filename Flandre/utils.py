@@ -280,3 +280,8 @@ def check_enabled(ctx):
             return True
     else:
         return True
+
+def check_if_cog(cog):
+    ''' Checks if the cog is a folder and does not start with _ '''
+
+    return cog[0] != '_' and isdir(f'Flandre/cogs/{cog}')

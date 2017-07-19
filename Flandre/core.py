@@ -120,8 +120,7 @@ class Bot(commands.AutoShardedBot):
         logger.info('Loaded cog: Cogdisable')
 
         # Load cogs
-        files = [file.replace('.py', '') for file in os.listdir('Flandre/cogs')
-                 if ".py" in file]
+        files = [cog for cog in os.listdir('Flandre/cogs') if utils.check_if_cog(cog)]
 
         if files:
             for file in files:
@@ -137,7 +136,7 @@ class Bot(commands.AutoShardedBot):
                 else:
                     logger.info(f'Loaded cog: {file}')
         else:
-            err_msg = "No python files found. Which means no commands found. Bot logged off"
+            err_msg = "No cogs found. Which means no commands found. Bot logged off"
             print(err_msg)
             logger.critical(err_msg)
             await self.logout()
