@@ -244,69 +244,10 @@ def check_core_folders():
     ''' Used to check if the bot has a cogs and data folder
     '''
 
-    # Check for data folder
-    if not isdir('Flandre/data'):
-        logger.warning(f"No data folder found. It has been made for you at 'Flandre/data'")
-        mkdir('Flandre/data')
-
     # Check for cogs folder
     if not isdir('Flandre/cogs'):
         logger.warning("No cogs folder found. It has been made for you at 'Flandre/cogs'")
         mkdir('Flandre/cogs')
-
-def check_cog_config(cog, filename, default=None):
-    ''' Check the data folder for the file asked in the cogs folder if not there it is made
-        Requires the cog to get name and the logger from bot
-        filename is the name of the file to look for
-        default is what is what to be saved if file is missing
-    '''
-
-    # Check if cog has a folder in data folder
-    if not isdir(f'{__package__}/data/{cog.__class__.__name__}'):
-        # Log the folder is missing and make it
-        logger.warning((f'"{__package__}/data/{cog.__class__.__name__}" '
-                        'is missing it has been make for you'))
-
-        mkdir(f'{__package__}/data/{cog.__class__.__name__}')
-
-    # Check for file
-    try:
-        with open(f'{__package__}/data/{cog.__class__.__name__}/{filename}', 'r') as file:
-            data = json.load(file)
-
-    except Exception as err:
-        # If the file could not be loaded
-        logger.error((f'{__package__}/data/{cog.__class__.__name__}/{filename} '
-                      'could not be loaded'))
-        logger.error(f'Reason: {err}')
-
-        # Make the file for user again
-        with open(f'{__package__}/data/{cog.__class__.__name__}/{filename}', 'w') as file:
-            if default is not None:
-                json.dump(default, file, indent=4, sort_keys=True)
-            else:
-                json.dump({}, file, indent=4, sort_keys=True)
-
-        logger.info((f'{__package__}/data/{cog.__class__.__name__}/{filename} '
-                     'has been remade for you'))
-
-        return default
-
-    else:
-        return data
-
-def save_cog_config(cog, filename, data):
-    ''' Saves the data given in data to the file called filename '''
-
-    try:
-        with open(f'{__package__}/data/{cog.__class__.__name__}/{filename}', 'w') as file:
-            json.dump(data, file, indent=4, sort_keys=True)
-    except:
-        logger.critical((f'{__package__}/data/{cog.__class__.__name__}/{filename} '
-                         'could not be saved. Please check it'))
-    else:
-        logger.info((f'{__package__}/data/{cog.__class__.__name__}/{filename} '
-                     'has been saved.'))
 
 async def send_cmd_help(bot, ctx):
     ''' Make the formatting for command groups from context '''
