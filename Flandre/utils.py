@@ -20,8 +20,8 @@ class Cogdisable:
     def __init__(self, bot):
         self.bot = bot
         # Make a json file that holds the guild id with the cogs disabled if not found
-        if not isfile(f'{__package__}/data/disabled_cogs.json'):
-            with open(f'{__package__}/data/disabled_cogs.json', 'w') as file:
+        if not isfile('Flandre/cogs/disabled_cogs.json'):
+            with open('Flandre/cogs/disabled_cogs.json', 'w') as file:
                 json.dump({}, file, indent=4, sort_keys=True)
 
     @commands.group(name='cog')
@@ -50,7 +50,7 @@ class Cogdisable:
             # Check if the cog is even loaded/valid
             if cog_name.title() in self.bot.cogs:
                 # Load the data file
-                with open(f'{__package__}/data/disabled_cogs.json', 'r+') as file:
+                with open('Flandre/cogs/disabled_cogs.json', 'r+') as file:
                     data = json.load(file)
 
                     # Check if the guild is already disabling cogs
@@ -88,7 +88,7 @@ class Cogdisable:
         # Check if the cog is even loaded/valid
         if cog_name.title() in self.bot.cogs:
             # Load the data file
-            with open(f'{__package__}/data/disabled_cogs.json', 'r+') as file:
+            with open('Flandre/cogs/disabled_cogs.json', 'r+') as file:
                 data = json.load(file)
 
                 # Check if cog is disabled
@@ -119,7 +119,7 @@ class Cogdisable:
         '''
 
         # Load the data file
-        with open(f'{__package__}/data/disabled_cogs.json', 'r') as file:
+        with open('Flandre/cogs/disabled_cogs.json', 'r') as file:
             data = json.load(file)
 
         # Set data to only the guild's data if any
@@ -157,14 +157,14 @@ class Reloader:
 
     def loadcog(self, cog):
         ''' Load cog/module '''
-        if not f"{__package__}.cogs." in cog:
-            cog = f"{__package__}.cogs." + cog
+        if not "Flandre.cogs." in cog:
+            cog = "Flandre.cogs." + cog
         self.bot.load_extension(cog)
 
     def unloadcog(self, cog):
         ''' Unload cog/module '''
-        if not f"{__package__}.cogs." in cog:
-            cog = f"{__package__}.cogs." + cog
+        if not "Flandre.cogs." in cog:
+            cog = "Flandre.cogs." + cog
         self.bot.unload_extension(cog)
 
     @commands.command()
@@ -245,14 +245,14 @@ def check_core_folders():
     '''
 
     # Check for data folder
-    if not isdir(f'{__package__}/data'):
-        logger.warning(f"No data folder found. It has been made for you at '{__package__}/data'")
-        mkdir(f'{__package__}/data')
+    if not isdir('Flandre/data'):
+        logger.warning(f"No data folder found. It has been made for you at 'Flandre/data'")
+        mkdir('Flandre/data')
 
     # Check for cogs folder
-    if not isdir(f'{__package__}/cogs'):
-        logger.warning(f"No cogs folder found. It has been made for you at '{__package__}/cogs'")
-        mkdir(f'{__package__}/cogs')
+    if not isdir('Flandre/cogs'):
+        logger.warning("No cogs folder found. It has been made for you at 'Flandre/cogs'")
+        mkdir('Flandre/cogs')
 
 def check_cog_config(cog, filename, default=None):
     ''' Check the data folder for the file asked in the cogs folder if not there it is made
