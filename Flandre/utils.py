@@ -265,7 +265,7 @@ def check_enabled(ctx):
         return True
 
     # Load the data file
-    with open(f'{__package__}/data/disabled_cogs.json', 'r') as file:
+    with open('Flandre/cogs/disabled_cogs.json', 'r') as file:
         data = json.load(file)
 
     # Check if guild is even disabling anything
