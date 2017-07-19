@@ -1,5 +1,6 @@
 ''' Holds the general cog '''
 import asyncio
+import logging
 from random import choice, randint
 from urllib.parse import quote
 
@@ -7,8 +8,9 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import utils
+from Flandre import utils, permissions
 
+logger = logging.getLogger(__package__)
 
 class General:
     ''' Holds commands that don't have a suitable place else where '''
@@ -20,7 +22,7 @@ class General:
         ''' Remove listeners '''
 
         self.bot.remove_listener(self.check_poll_votes, "on_message")
-    
+
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
 
@@ -29,6 +31,17 @@ class General:
         ''' Pong '''
 
         await ctx.send('Pong')
+
+    @commands.command(hidden=True)
+    @permissions.check_owners()
+    async def emote(self, ctx, name: str):
+        ''' Makes the bot send that emote in chat '''
+
+        if name in [i.name for i in self.bot.emojis]:
+            for emote in self.bot.emojis:
+                if name == emote.name:
+                    await ctx.send(str(emote))
+                    break
 
     @commands.command()
     async def roll(self, ctx, *number: str):
@@ -175,7 +188,7 @@ class General:
                 poll = Poll(ctx.message, text, self)
                 if poll.valid:
                     self.polls[ctx.channel.id] = poll
-                    self.bot.logger.info(f"New Poll made in channel: {ctx.channel.id}")
+                    logger.info(f"New Poll made in channel: {ctx.channel.id}")
                     await poll.start()
                 else:
                     await ctx.send("poll question;option1;option2 (...)")
@@ -259,7 +272,7 @@ class Poll():
         embed.set_author(name='Poll')
         await self.channel.send(embed=embed)
         self.cog.remove_poll(self.channel.id)
-        self.cog.bot.logger.info(f"Poll deleted for channel: {self.channel.id}")
+        logger.info(f"Poll deleted for channel: {self.channel.id}")
 
     def check_answer(self, message):
         ''' Used to check if the users answer is valid '''
@@ -273,9 +286,3 @@ class Poll():
                     self.already_voted.append(message.author.id)
         except ValueError:
             pass
-
-def setup(bot):
-    ''' Setup function to add cog to bot '''
-    cog = General(bot)
-    bot.add_listener(cog.check_poll_votes, "on_message")
-    bot.add_cog(cog)
