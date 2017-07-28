@@ -1134,10 +1134,19 @@ class Mod:
                     embed.set_author(name='Message edit')
                     embed.set_thumbnail(url=after.author.avatar_url)
                     embed.set_footer(text='Done by user')
-                    if before.clean_content or after.clean_content:
-                        embed.add_field(name='Content (before):', value=before.clean_content)
-                        embed.add_field(name='Content (after):', value=after.clean_content)
-                    await log_channel.send(embed=embed)
+                    if before.clean_content:
+                        before_content = before.clean_content
+                    else:
+                        before_content = '(empty)'
+
+                    if after.clean_content:
+                        after_content = after.clean_content
+                    else:
+                        after_content = '(empty)'
+
+                    embed.add_field(name='Content (before):', value=before_content)
+                    embed.add_field(name='Content (after):', value=after_content)
+                    await log_channel.send(embed=embed, **kwargs)
 
     async def post_deleted_message(self, message):
         ''' Post when a message is deleted to the log channel '''
