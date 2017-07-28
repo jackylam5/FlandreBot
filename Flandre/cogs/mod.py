@@ -81,6 +81,7 @@ class Mod:
 
         self.bot.remove_listener(self.message_checker, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
+        self.bot.remove_listener(self.post_edited_message, "on_message_edit")
         self.bot.remove_listener(self.post_deleted_message, "on_message_delete")
         self.ban_loggers = {}
         self.ban_log_check.cancel()
@@ -1108,6 +1109,32 @@ class Mod:
                                             await after.channel.send(msg)
                                         break
 
+    async def post_edited_message(self, before, after):
+        ''' Post when a message is edited to the log channel '''
+
+        # Check message is not a DM
+        if isinstance(message.channel, discord.abc.GuildChannel):
+            if message.author != self.bot.user:
+                send_message = False
+                log_channel = None
+                if str(message.guild.id) in self.message_channels:
+                    send_message = True
+                    log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
+                elif str(message.guild.id) in self.logging_channels:
+                    send_message = True
+                    log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
+
+                if send_message:
+                    desc = (f'Author: {after.author.name}#{after.author.discriminator}\n'
+                            f'Channel: {after.channel.mention}\n'
+                            f'Timestamp: {after.created_at.strftime("%c")}')
+
+                    embed = discord.Embed(type='rich', description=desc, timestamp=after.edited_at)
+                    embed.set_author(name='Message deletion')
+                    embed.set_thumbnail(url=message.author.avatar_url)
+                    embed.set_foot(text='Done by user')
+                    await log_channel.send(embed=embed)
+
     async def post_deleted_message(self, message):
         ''' Post when a message is deleted to the log channel '''
 
@@ -1160,5 +1187,6 @@ def setup(bot):
     cog = Mod(bot)
     bot.add_listener(cog.message_checker, "on_message")
     bot.add_listener(cog.check_edit_filter, "on_message_edit")
+    bot.add_listener(cog.post_edited_message, "on_message_edit")
     bot.add_listener(cog.post_deleted_message, "on_message_delete")
     bot.add_cog(cog)
