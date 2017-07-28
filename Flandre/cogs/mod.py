@@ -1134,10 +1134,19 @@ class Mod:
                     embed.set_author(name='Message edit')
                     embed.set_thumbnail(url=after.author.avatar_url)
                     embed.set_footer(text='Done by user')
-                    if before.clean_content or after.clean_content:
-                        embed.add_field(name='Content (before):', value=before.clean_content)
-                        embed.add_field(name='Content (after):', value=after.clean_content)
-                    await log_channel.send(embed=embed)
+                    if before.clean_content:
+                        before_content = before.clean_content
+                    else:
+                        before_content = '(empty)'
+
+                    if after.clean_content:
+                        after_content = after.clean_content
+                    else:
+                        after_content = '(empty)'
+
+                    embed.add_field(name='Content (before):', value=before_content)
+                    embed.add_field(name='Content (after):', value=after_content)
+                    await log_channel.send(embed=embed, **kwargs)
 
     async def post_deleted_message(self, message):
         ''' Post when a message is deleted to the log channel '''
@@ -1163,10 +1172,16 @@ class Mod:
                         log_channel = self.bot.get_channel(self.logging_channels[guild_id])
 
                     if log_channel is not None:
+                        if message.attachments:
+                            attachments = ', '.join(attach.url for attach in message.attachments)
+                        else:
+                            attachments = '(none)'
+
                         desc = (f'Author: {message.author.mention} '
                                 f'({message.author.name}#{message.author.discriminator})\n'
                                 f'Channel: {message.channel.mention}\n'
-                                f'Timestamp: {message.created_at.strftime("%c")}')
+                                f'Timestamp: {message.created_at.strftime("%c")}\n'
+                                f'Attachments: {attachments}')
 
                         embed = discord.Embed(type='rich', description=desc)
                         embed.set_author(name='Message deletion')
