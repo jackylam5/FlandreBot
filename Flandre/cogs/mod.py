@@ -1,6 +1,5 @@
 ''' Hold the moderation cog for the mod '''
 import asyncio
-from datetime import datetime
 import logging
 from io import StringIO, BytesIO
 import re
@@ -1128,9 +1127,10 @@ class Mod:
                     desc = (f'Author: {after.author.mention} '
                             f'({after.author.name}#{after.author.discriminator})\n'
                             f'Channel: {after.channel.mention}\n'
-                            f'Timestamp: {after.created_at.strftime("%c")}')
+                            f'Created: {after.created_at.strftime("%c")}\n'
+                            f'Edited: {after.edited_at.strftime("%c")}')
 
-                    embed = discord.Embed(type='rich', description=desc, timestamp=after.edited_at)
+                    embed = discord.Embed(type='rich', description=desc)
                     embed.set_author(name='Message edit')
                     embed.set_thumbnail(url=after.author.avatar_url)
                     embed.set_footer(text='Done by user')
@@ -1163,12 +1163,12 @@ class Mod:
                         log_channel = self.bot.get_channel(self.logging_channels[guild_id])
 
                     if log_channel is not None:
-                        desc = (f'Author: {message.author.mention}'
+                        desc = (f'Author: {message.author.mention} '
                                 f'({message.author.name}#{message.author.discriminator})\n'
                                 f'Channel: {message.channel.mention}\n'
                                 f'Timestamp: {message.created_at.strftime("%c")}')
 
-                        embed = discord.Embed(type='rich', description=desc, timestamp=datetime.now())
+                        embed = discord.Embed(type='rich', description=desc)
                         embed.set_author(name='Message deletion')
                         embed.set_thumbnail(url=message.author.avatar_url)
                         if message.clean_content:
