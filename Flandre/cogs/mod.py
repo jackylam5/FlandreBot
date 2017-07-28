@@ -1196,7 +1196,16 @@ class Mod:
                             self.clean_up_messages.remove(message.id)
                         else:
                             embed.set_footer(text='Done by user/staff')
-                        await log_channel.send(embed=embed)
+
+                        files = []
+                        # TODO
+                        if len(files) == 0:
+                            kwargs = {}
+                        elif len(files) == 1:
+                            kwargs = {'file': files[0]}
+                        else:
+                            kwargs = {'files': files}
+                        await log_channel.send(embed=embed, **kwargs)
                 else:
                     self.ban_loggers[message.author.id].logger.info(message.clean_content)
 
