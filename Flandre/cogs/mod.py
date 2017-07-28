@@ -66,7 +66,7 @@ class Mod:
     def __init__(self, bot):
         self.bot = bot
         self.logging_channels = utils.check_cog_config(self, 'logging_channels.json')
-        self.message_channels = utils.check_cog_config(self, 'message_channels.json') 
+        self.message_channels = utils.check_cog_config(self, 'message_channels.json')
         self.slowmode_file = utils.check_cog_config(self, 'slowmode.json')
         self.slowmode = self.slowmode_file.copy()
         self.filter = utils.check_cog_config(self, 'filter.json')
@@ -514,7 +514,7 @@ class Mod:
                             f'Amount: {len(to_delete)}')
                     embed = discord.Embed(type='rich', description=desc)
                     embed.set_author(name='Cleanup Log')
-                    embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url) 
+                    embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                     await log_channel.send(embed=embed)
 
     @commands.group(name='filter')
