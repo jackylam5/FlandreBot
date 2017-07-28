@@ -1150,7 +1150,7 @@ class Mod:
                     return
 
                 if message.author.id not in self.ban_loggers:
-                    # Log in the deleteion in log_channel if set up
+                    # Log in the deletion in log_channel if set up
                     send_message = False
                     log_channel = None
                     if str(message.guild.id) in self.message_channels:
