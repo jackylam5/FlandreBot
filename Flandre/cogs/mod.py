@@ -66,7 +66,7 @@ class Mod:
     def __init__(self, bot):
         self.bot = bot
         self.logging_channels = utils.check_cog_config(self, 'logging_channels.json')
-        self.message_channels = utils.check_cog_config(self, 'message_channels.json') 
+        self.message_channels = utils.check_cog_config(self, 'message_channels.json')
         self.slowmode_file = utils.check_cog_config(self, 'slowmode.json')
         self.slowmode = self.slowmode_file.copy()
         self.filter = utils.check_cog_config(self, 'filter.json')
@@ -81,6 +81,7 @@ class Mod:
 
         self.bot.remove_listener(self.message_checker, "on_message")
         self.bot.remove_listener(self.check_edit_filter, "on_message_edit")
+        self.bot.remove_listener(self.post_edited_message, "on_message_edit")
         self.bot.remove_listener(self.post_deleted_message, "on_message_delete")
         self.ban_loggers = {}
         self.ban_log_check.cancel()
@@ -513,7 +514,7 @@ class Mod:
                             f'Amount: {len(to_delete)}')
                     embed = discord.Embed(type='rich', description=desc)
                     embed.set_author(name='Cleanup Log')
-                    embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url) 
+                    embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
                     await log_channel.send(embed=embed)
 
     @commands.group(name='filter')
@@ -1108,6 +1109,36 @@ class Mod:
                                             await after.channel.send(msg)
                                         break
 
+    async def post_edited_message(self, before, after):
+        ''' Post when a message is edited to the log channel '''
+
+        # Check message is not a DM
+        if isinstance(after.channel, discord.abc.GuildChannel):
+            if after.author != self.bot.user:
+                # Log in the edit in log_channel if set up
+                guild_id = str(after.guild.id)
+                log_channel = None
+                if guild_id in self.message_channels:
+                    log_channel = self.bot.get_channel(self.message_channels[guild_id])
+                elif guild_id in self.logging_channels:
+                    log_channel = self.bot.get_channel(self.logging_channels[guild_id])
+
+                if log_channel is not None:
+                    desc = (f'Author: {after.author.mention} '
+                            f'({after.author.name}#{after.author.discriminator})\n'
+                            f'Channel: {after.channel.mention}\n'
+                            f'Created: {after.created_at.strftime("%c")}\n'
+                            f'Edited: {after.edited_at.strftime("%c")}')
+
+                    embed = discord.Embed(type='rich', description=desc)
+                    embed.set_author(name='Message edit')
+                    embed.set_thumbnail(url=after.author.avatar_url)
+                    embed.set_footer(text='Done by user')
+                    if before.clean_content or after.clean_content:
+                        embed.add_field(name='Content (before):', value=before.clean_content)
+                        embed.add_field(name='Content (after):', value=after.clean_content)
+                    await log_channel.send(embed=embed)
+
     async def post_deleted_message(self, message):
         ''' Post when a message is deleted to the log channel '''
 
@@ -1123,18 +1154,17 @@ class Mod:
                     return
 
                 if message.author.id not in self.ban_loggers:
-                    # Log in the deleteion in log_channel if set up
-                    send_message = False
+                    # Log in the deletion in log_channel if set up
+                    guild_id = str(message.guild.id)
                     log_channel = None
-                    if str(message.guild.id) in self.message_channels:
-                        send_message = True
-                        log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
-                    elif str(message.guild.id) in self.logging_channels:
-                        send_message = True
-                        log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
+                    if guild_id in self.message_channels:
+                        log_channel = self.bot.get_channel(self.message_channels[guild_id])
+                    elif guild_id in self.logging_channels:
+                        log_channel = self.bot.get_channel(self.logging_channels[guild_id])
 
-                    if send_message:
-                        desc = (f'Author: {message.author.name}#{message.author.discriminator}\n'
+                    if log_channel is not None:
+                        desc = (f'Author: {message.author.mention} '
+                                f'({message.author.name}#{message.author.discriminator})\n'
                                 f'Channel: {message.channel.mention}\n'
                                 f'Timestamp: {message.created_at.strftime("%c")}')
 
@@ -1160,5 +1190,6 @@ def setup(bot):
     cog = Mod(bot)
     bot.add_listener(cog.message_checker, "on_message")
     bot.add_listener(cog.check_edit_filter, "on_message_edit")
+    bot.add_listener(cog.post_edited_message, "on_message_edit")
     bot.add_listener(cog.post_deleted_message, "on_message_delete")
     bot.add_cog(cog)
