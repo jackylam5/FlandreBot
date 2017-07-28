@@ -1120,7 +1120,8 @@ class Mod:
                 guild_id = str(after.guild.id)
                 if guild_id in chain(self.message_channels, self.logging_channels):
                     log_channel = self.bot.get_channel(self.message_channels[guild_id])
-                    desc = (f'Author: {after.author.name}#{after.author.discriminator}\n'
+                    desc = (f'Author: {after.author.mention} '
+                            f'({after.author.name}#{after.author.discriminator})\n'
                             f'Channel: {after.channel.mention}\n'
                             f'Timestamp: {after.created_at.strftime("%c")}')
 
@@ -1151,7 +1152,8 @@ class Mod:
                     guild_id = str(message.guild.id)
                     if guild_id in chain(self.message_channels, self.logging_channels):
                         log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
-                        desc = (f'Author: {message.author.name}#{message.author.discriminator}\n'
+                        desc = (f'Author: {message.author.mention}'
+                                f'({message.author.name}#{message.author.discriminator})\n'
                                 f'Channel: {message.channel.mention}\n'
                                 f'Timestamp: {message.created_at.strftime("%c")}')
 
