@@ -1172,10 +1172,16 @@ class Mod:
                         log_channel = self.bot.get_channel(self.logging_channels[guild_id])
 
                     if log_channel is not None:
+                        if message.attachments:
+                            attachments = ', '.join(attach.url for attach in message.attachments)
+                        else:
+                            attachments = '(none)'
+
                         desc = (f'Author: {message.author.mention} '
                                 f'({message.author.name}#{message.author.discriminator})\n'
                                 f'Channel: {message.channel.mention}\n'
-                                f'Timestamp: {message.created_at.strftime("%c")}')
+                                f'Timestamp: {message.created_at.strftime("%c")}\n'
+                                f'Attachments: {attachments}')
 
                         embed = discord.Embed(type='rich', description=desc)
                         embed.set_author(name='Message deletion')
