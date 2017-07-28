@@ -1,5 +1,6 @@
 ''' Hold the moderation cog for the mod '''
 import asyncio
+from datetime import datetime
 import logging
 from io import StringIO, BytesIO
 import re
@@ -1167,7 +1168,7 @@ class Mod:
                                 f'Channel: {message.channel.mention}\n'
                                 f'Timestamp: {message.created_at.strftime("%c")}')
 
-                        embed = discord.Embed(type='rich', description=desc)
+                        embed = discord.Embed(type='rich', description=desc, timestamp=datetime.now())
                         embed.set_author(name='Message deletion')
                         embed.set_thumbnail(url=message.author.avatar_url)
                         if message.clean_content:
