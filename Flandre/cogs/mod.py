@@ -1,7 +1,6 @@
 ''' Hold the moderation cog for the mod '''
 import asyncio
 import logging
-from itertools import chain
 from io import StringIO, BytesIO
 import re
 import time
@@ -1118,8 +1117,13 @@ class Mod:
             if after.author != self.bot.user:
                 # Log in the edit in log_channel if set up
                 guild_id = str(after.guild.id)
-                if guild_id in chain(self.message_channels, self.logging_channels):
+                log_channel = None
+                if guild_id in self.message_channels:
                     log_channel = self.bot.get_channel(self.message_channels[guild_id])
+                elif guild_id in self.logging_channels:
+                    log_channel = self.bot.get_channel(self.logging_channels[guild_id])
+
+                if log_channel is not None:
                     desc = (f'Author: {after.author.mention} '
                             f'({after.author.name}#{after.author.discriminator})\n'
                             f'Channel: {after.channel.mention}\n'
@@ -1151,8 +1155,13 @@ class Mod:
                 if message.author.id not in self.ban_loggers:
                     # Log in the deletion in log_channel if set up
                     guild_id = str(message.guild.id)
-                    if guild_id in chain(self.message_channels, self.logging_channels):
-                        log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
+                    log_channel = None
+                    if guild_id in self.message_channels:
+                        log_channel = self.bot.get_channel(self.message_channels[guild_id])
+                    elif guild_id in self.logging_channels:
+                        log_channel = self.bot.get_channel(self.logging_channels[guild_id])
+
+                    if log_channel is not None:
                         desc = (f'Author: {message.author.mention}'
                                 f'({message.author.name}#{message.author.discriminator})\n'
                                 f'Channel: {message.channel.mention}\n'
