@@ -1129,8 +1129,9 @@ class Mod:
                     embed.set_author(name='Message edit')
                     embed.set_thumbnail(url=after.author.avatar_url)
                     embed.set_footer(text='Done by user')
-                    if before.clean_content:
-                        embed.add_field(name='Content:', value=before.clean_content)
+                    if before.clean_content or after.clean_content:
+                        embed.add_field(name='Content (before):', value=before.clean_content)
+                        embed.add_field(name='Content (after):', value=after.clean_content)
                     await log_channel.send(embed=embed)
 
     async def post_deleted_message(self, message):
