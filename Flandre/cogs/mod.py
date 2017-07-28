@@ -1,6 +1,7 @@
 ''' Hold the moderation cog for the mod '''
 import asyncio
 import logging
+from itertools import chain
 from io import StringIO, BytesIO
 import re
 import time
@@ -1113,26 +1114,22 @@ class Mod:
         ''' Post when a message is edited to the log channel '''
 
         # Check message is not a DM
-        if isinstance(message.channel, discord.abc.GuildChannel):
-            if message.author != self.bot.user:
-                send_message = False
-                log_channel = None
-                if str(message.guild.id) in self.message_channels:
-                    send_message = True
-                    log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
-                elif str(message.guild.id) in self.logging_channels:
-                    send_message = True
-                    log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
-
-                if send_message:
+        if isinstance(after.channel, discord.abc.GuildChannel):
+            if after.author != self.bot.user:
+                # Log in the edit in log_channel if set up
+                guild_id = str(after.guild.id)
+                if guild_id in chain(self.message_channels, self.logging_channels):
+                    log_channel = self.bot.get_channel(self.message_channels[guild_id])
                     desc = (f'Author: {after.author.name}#{after.author.discriminator}\n'
                             f'Channel: {after.channel.mention}\n'
                             f'Timestamp: {after.created_at.strftime("%c")}')
 
                     embed = discord.Embed(type='rich', description=desc, timestamp=after.edited_at)
-                    embed.set_author(name='Message deletion')
-                    embed.set_thumbnail(url=message.author.avatar_url)
-                    embed.set_foot(text='Done by user')
+                    embed.set_author(name='Message edit')
+                    embed.set_thumbnail(url=after.author.avatar_url)
+                    embed.set_footer(text='Done by user')
+                    if before.clean_content:
+                        embed.add_field(name='Content:', value=before.clean_content)
                     await log_channel.send(embed=embed)
 
     async def post_deleted_message(self, message):
@@ -1151,16 +1148,9 @@ class Mod:
 
                 if message.author.id not in self.ban_loggers:
                     # Log in the deletion in log_channel if set up
-                    send_message = False
-                    log_channel = None
-                    if str(message.guild.id) in self.message_channels:
-                        send_message = True
+                    guild_id = str(message.guild.id)
+                    if guild_id in chain(self.message_channels, self.logging_channels):
                         log_channel = self.bot.get_channel(self.message_channels[str(message.guild.id)])
-                    elif str(message.guild.id) in self.logging_channels:
-                        send_message = True
-                        log_channel = self.bot.get_channel(self.logging_channels[str(message.guild.id)])
-
-                    if send_message:
                         desc = (f'Author: {message.author.name}#{message.author.discriminator}\n'
                                 f'Channel: {message.channel.mention}\n'
                                 f'Timestamp: {message.created_at.strftime("%c")}')
