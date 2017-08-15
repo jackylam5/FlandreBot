@@ -88,7 +88,10 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# config file
+# Data
+Flandre/data/
+
+# Config file
 Flandre/config.json
 
 # Editor files

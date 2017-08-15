@@ -7,9 +7,10 @@ from discord.ext import commands
 from .. import permissions, utils
 
 # The id for the guild. This is used to check that only that guild can use the cog
-GUILD_ID = 
-BOT_CHANNEL_ID = 
-JOIN_CHANNEL_ID = 
+GUILD_ID =
+BOT_CHANNEL_ID =
+JOIN_CHANNEL_ID =
+REPORT_CHANNEL_ID =
 
 def check_server():
     '''
@@ -247,6 +248,48 @@ class Programming:
 
             else:
                 await ctx.send("No vaild roles to be removed")
+
+    @commands.command()
+    async def report(self, ctx, user: discord.User, channel: discord.TextChannel, *, description: str):
+        '''
+        Reports a User to the staff.
+        Use this function to report behaviour that does not adhere
+        to the rules. Keep in mind that user names are case-sensitive
+        and that you are able to pass ID's for both the user and the
+        channel to be associated with the report. This is often useful
+        when there are multiple users or channels with the same name
+        that the bot can see (right click the channel -> Copy ID).
+        '''
+
+        guild: discord.Guild = self.bot.get_guild(GUILD_ID)
+
+        if not all(u in guild.members for u in [ctx.author, user]):
+            return await ctx.send(embed=discord.Embed(
+                title="Failed to report User:",
+                description=f"The reported User and you must be a member of the {guild.name} Guild.",
+                colour=discord.Colour.red()
+            ))
+        elif channel not in guild.text_channels:
+            return await ctx.send(embed=discord.Embed(
+                title="Failed to report User:",
+                description=f"The specified channel must be a text channel of the {guild.name} Guild.",
+                colour=discord.Colour.red()
+            ))
+
+        report_channel = self.bot.get_channel(REPORT_CHANNEL_ID)
+        await report_channel.send(embed=discord.Embed(
+            title=f"New Report from {ctx.author.name} ({ctx.author.id})",
+            colour=discord.Colour.orange()
+        ).add_field(
+            name="Reported User",
+            value=f"**Name**: {user.name} (`{user.id}`)\n"
+                  f"**Mention**: {user.mention}\n"
+                  f"**In channel**: {channel.mention}"
+        ).add_field(
+            name="Report description",
+            value=description,
+            inline=False
+        ))
 
     async def join_server(self, member):
         ''' Give user Guest role on join '''

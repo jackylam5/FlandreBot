@@ -273,7 +273,7 @@ class MusicPlayer:
 
                             # If search term added as search always returns as it was in a playlist
                             if search:
-                                msg = ':notes: Queued: `{0}` Duration: `{1} mins {2} seconds` [Songs in queue: {3}]'
+                                msg = ':notes: Queued: `{0} [{1}:{2:02d}]` [Songs in queue: {3}]'
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
 
@@ -288,7 +288,7 @@ class MusicPlayer:
                             else:
                                 # Tell user how many songs were added
                                 if queued > 0:
-                                    msg = 'Queued: `{0}` songs Duration: `{1} mins {2} seconds` [Songs in queue: {1}]'
+                                    msg = 'Queued: `{0} [{1}:{2:02d}]` songs [Songs in queue: {3}]'
 
                                 else:
                                     msg = 'No songs were added'
@@ -309,7 +309,7 @@ class MusicPlayer:
                                 mins, secs = divmod(result['duration'], 60)
 
                                 # Tell the user the song has been queued
-                                msg = ':notes: Queued: `{0}` Duration: `{1} mins {2} seconds` [Songs in queue: {1}]'
+                                msg = ':notes: Queued: `{0} [{1}:{2:02d}]` [Songs in queue: {3}]'
                                 if self.paused_timeleft is not None:
                                     msg += ' Current song is *PAUSED*'
 
