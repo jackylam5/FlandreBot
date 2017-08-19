@@ -229,6 +229,7 @@ class Poll():
         self.author = message.author.id
         self.cog = cog
         self.bot = bot
+        self.messageID = None
         msg = text.split(";")
         if len(msg) < 2 or len(msg) > 10: # Needs at least one question and 2 choices
             self.valid = False
@@ -254,14 +255,20 @@ class Poll():
         embed.set_author(name='Poll')
         await self.channel.send(embed=embed)
         lastMessage = await self.getLastMessage(self.bot, self.channel)
+        self.messageID = lastMessage.id
         for x in range(len(self.answers.items())):
             await lastMessage.add_reaction(numberReactions[x])
+        try:
+            lastMessage = await self.channel.get_message(self.messageID)
+            await lastMessage.pin()
+        except:
+            print('something went wrong')
 
     async def end_poll(self):
         ''' Used to end the poll '''
         self.valid = False
         msg = f"**POLL ENDED!**\n\n{self.question}\n\n"
-        lastMessage = await self.getLastMessage(self.bot, self.channel)
+        lastMessage = await self.channel.get_message(self.messageID)
         reactions = lastMessage.reactions
         print(len(reactions))
         for pid, data in self.answers.items():
@@ -273,6 +280,10 @@ class Poll():
         await self.channel.send(embed=embed)
         self.cog.remove_poll(self.author)
         self.cog.bot.logger.info(f"Poll deleted for channel: {self.channel.id}")
+        try:
+            await lastMessage.unpin()
+        except:
+            pass
 
     async def getLastMessage(self, bot, channel):
         async for message in channel.history(limit=10):
