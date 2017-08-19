@@ -1,14 +1,14 @@
-''' Holds the music cog for the bot '''
+''' Holds the classes for song and the music player for the cog '''
+
 import asyncio
 import functools
+import logging
 import time
 
-import youtube_dl
 import discord
-from discord.ext import commands
+import youtube_dl
 
-from .. import permissions, utils
-
+logger = logging.getLogger(__package__)
 
 class Song:
     '''
@@ -23,7 +23,6 @@ class Song:
         self.duration = ytdl_info['duration']
         self.thumbnail = ytdl_info['thumbnail']
 
-
 class MusicPlayer:
     '''
     Music Player Class
@@ -34,7 +33,7 @@ class MusicPlayer:
     def __init__(self, bot):
         self.bot = bot
         # The voice client for the guild
-        self._vc = None
+        self.vc = None
         # The channel the now playing messages get sent to
         self.text_channel = None
         # The current song being played and the queue and the voulume for the song and if any skips
@@ -51,11 +50,13 @@ class MusicPlayer:
         self.paused_timeleft = None
         # Background task that plays the music for the server
         self.audio_player = self.bot.loop.create_task(self.audio_player_task())
-
+        # Task for auto leave if no song has been played for a while
+        self.auto_leave = None
+    
     def check_mod(self, user):
         '''
         Check if user is mod needed as some admin commands can be used by non-admins
-        If bot is not connected such as the first connect
+        Such as if bot is not connected such as the first connect
         '''
 
         # Owner
@@ -69,7 +70,7 @@ class MusicPlayer:
 
         else:
             return False
-
+    
     async def connect(self, ctx):
         '''
         Connects Bot to voice channel if not in one
@@ -83,19 +84,19 @@ class MusicPlayer:
 
         else:
             # Check if there is a voice client for the server
-            if self._vc is None:
+            if self.vc is None:
                 # Check if voice is still connected somehow
                 for vc in self.bot.voice_clients:
                     if vc.guild == ctx.guild:
-                        self._vc = vc
+                        self.vc = vc
                         self.text_channel = ctx.channel
 
                         # Check if something is playing
-                        if self._vc.is_playing or self._vc.is_paused:
-                            self._vc.stop()
+                        if self.vc.is_playing or self.vc.is_paused:
+                            self.vc.stop()
 
                         # Tell the user we have connected and bound messages to the channel
-                        await ctx.send((f'Connected to **{self._vc.channel.name}** '
+                        await ctx.send((f'Connected to **{self.vc.channel.name}** '
                                         'and bound to this text channel'))
 
                         break
@@ -103,11 +104,11 @@ class MusicPlayer:
                 else:
                     # No voice client means bot is not connected so anyone can connect bot
                     # Connect to that voice channel
-                    self._vc = await ctx.author.voice.channel.connect()
+                    self.vc = await ctx.author.voice.channel.connect()
                     # Set text channel to the channel the message was sent in
                     self.text_channel = ctx.channel
                     # Tell the user we have connected and bound messages to the channel
-                    await ctx.send((f'Connected to **{self._vc.channel.name}** '
+                    await ctx.send((f'Connected to **{self.vc.channel.name}** '
                                     'and bound to this text channel'))
 
             else:
@@ -115,16 +116,16 @@ class MusicPlayer:
                 # This can only be done by mods and above so we need to check that
                 if self.check_mod(ctx.author):
                     # Check if the person asking the bot to move is not in the same channel
-                    if ctx.author.voice.channel == self._vc.channel:
+                    if ctx.author.voice.channel == self.vc.channel:
                         await ctx.send(f'{ctx.author.mention}, I am already in your voice channel')
 
                     else:
                         # Move to that channel
-                        await self._vc.move_to(ctx.author.voice.channel)
+                        await self.vc.move_to(ctx.author.voice.channel)
                         # Set text channel to the channel the message was sent in
                         self.text_channel = ctx.channel
                         # Tell the user we have moved and bound messages to the channel
-                        await ctx.send((f'Moved to **{self._vc.channel.name}** '
+                        await ctx.send((f'Moved to **{self.vc.channel.name}** '
                                         'and bound to this text channel'))
 
                 else:
@@ -149,16 +150,16 @@ class MusicPlayer:
             self.queue = []
 
             # Check if the voice client is playing or paused and stop if it is
-            if self._vc.is_playing() or self._vc.is_paused():
-                self._vc.stop()
+            if self.vc.is_playing() or self.vc.is_paused():
+                self.vc.stop()
 
             # Disconnect from voice
-            if self._vc.is_connected():
-                await self._vc.disconnect()
+            if self.vc.is_connected():
+                await self.vc.disconnect()
 
             await asyncio.sleep(1)
             # Set the Voice Client to none
-            self._vc = None
+            self.vc = None
 
             # If the disconnect was forced
             if force:
@@ -167,9 +168,13 @@ class MusicPlayer:
                                                   'Please wait a minute or two then reconnect me'))
 
                 else:
-                    await self.text_channel.send('Disconnected from voice [Empty Voice Channel]')
+                    await self.text_channel.send('Force disconnected from voice')
                 # Cancel the player task and tell cog this player can be removed
                 self.audio_player.cancel()
+                if self.auto_leave is not None:
+                    self.auto_leave.cancel()
+                    self.auto_leave = None
+                
                 return True
 
             else:
@@ -179,6 +184,10 @@ class MusicPlayer:
 
                 # Cancel the player task and tell cog this player can be removed
                 self.audio_player.cancel()
+                if self.auto_leave is not None:
+                    self.auto_leave.cancel()
+                    self.auto_leave = None
+
                 return True
 
         else:
@@ -187,18 +196,17 @@ class MusicPlayer:
 
             return False
 
-
     async def add_queue(self, ctx, link):
         ''' Adds link to the queue to be played '''
 
         # Check if the bot is in a channel to play music
-        if self._vc is None:
+        if self.vc is None:
             await ctx.send((f'{ctx.author.mention}, '
                             'I am not in a voice channel to play music. Please connect me first'))
 
         else:
             # Check if the user is in the same channel as the bot
-            if ctx.author.voice is not None and ctx.author.voice.channel == self._vc.channel:
+            if ctx.author.voice is not None and ctx.author.voice.channel == self.vc.channel:
                 start_pos = 1 # The start pos for playlists
                 search = False # Used to tell ytdl that we are doing a youtube search
 
@@ -266,7 +274,7 @@ class MusicPlayer:
                                     log_msg = (f"Video in {link}, could not be downloaded. "
                                                f"Guild: {ctx.guild.name} ({ctx.guild.id})")
 
-                                    self.bot.logger.warning(log_msg)
+                                    logger.warning(log_msg)
 
                             # Make the duration readable
                             mins, secs = divmod(duration, 60)
@@ -326,7 +334,7 @@ class MusicPlayer:
                                 log_msg = (f"Video in {link}, could not be downloaded. "
                                            f"Guild: {ctx.guild.name} ({ctx.guild.id})")
 
-                                self.bot.logger.warning(log_msg)
+                                logger.warning(log_msg)
 
                     else:
                         await ctx.send(f'Sorry {ctx.author.mention}, nothing was found from that')
@@ -347,11 +355,11 @@ class MusicPlayer:
                                     'You need to be in a voice channel to skip the song'))
         else:
             # Check if there is a music player and it is playing
-            if self._vc.is_playing() or self._vc.is_paused():
+            if self.vc.is_playing() or self.vc.is_paused():
                 # Check if forced
                 if force:
                     self.skips.clear()
-                    self._vc.stop()
+                    self.vc.stop()
                     await ctx.send(f'{ctx.author.mention} has forced skipped the song')
 
                 else:
@@ -359,12 +367,12 @@ class MusicPlayer:
                     if ctx.author.id not in self.skips:
                         self.skips.add(ctx.author.id)
                         total_votes = len(self.skips)
-                        skips_needed = round(len(self._vc.channel.members) * 0.6)
+                        skips_needed = round(len(self.vc.channel.members) * 0.6)
 
                         # It the number of enough to pass skip
                         if total_votes >= skips_needed:
                             self.skips.clear()
-                            self._vc.stop()
+                            self.vc.stop()
                             await ctx.send((f'{ctx.author.mention} has voted to skip.\n'
                                             'The vote skip has passed.'))
 
@@ -399,7 +407,7 @@ class MusicPlayer:
                 # Change percentage to a valid number for ffmpeg or avconv
                 self.volume = int(percent) / 100
                 # Change volume
-                self._vc.source.volume = self.volume
+                self.vc.source.volume = self.volume
                 # Send volume has been changed message
                 await ctx.send(f'{ctx.author.mention}, Volume has been changed to: **{percent}%**')
 
@@ -407,9 +415,9 @@ class MusicPlayer:
         ''' Pauses the music '''
 
         # Check if there is something playing and isn't already pasued
-        if self._vc.is_playing() and not self._vc.is_paused():
+        if self.vc.is_playing() and not self.vc.is_paused():
             # Pause then calculate how much time was left in the song
-            self._vc.pause()
+            self.vc.pause()
             self.paused_timeleft = round(self.time_song_ends - time.time())
             await ctx.send(f':pause_button: **{self.current.title}** is now paused')
 
@@ -420,11 +428,11 @@ class MusicPlayer:
         ''' Resume the music '''
 
         # Check if there is something pasued and not playing
-        if self._vc.is_paused() and not self._vc.is_playing():
+        if self.vc.is_paused() and not self.vc.is_playing():
             # Calculate when the song ends form the time left then resume the song
             self.time_song_ends = time.time() + self.paused_timeleft
             self.paused_timeleft = None
-            self._vc.resume()
+            self.vc.resume()
             await ctx.send(f':arrow_forward:  **{self.current.title}** is now playing')
 
         else:
@@ -569,8 +577,18 @@ class MusicPlayer:
         ''' Used to tell the audio player that the song is done and the next one can be played
         '''
 
+        self.auto_leave = self.bot.loop.create_task(self.auto_leave_task())
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
 
+    async def auto_leave_task(self):
+        '''
+        Leave the voice after 5 mins of no music
+        '''
+
+        await asyncio.sleep(300)
+        await self.text_channel.send('No music has been added for 5 mins. Disconnected')
+        await self.disconnect(self.bot.user, force=True)
+    
     async def audio_player_task(self):
         '''
         Background task that waits for a song to be in the queue
@@ -580,6 +598,10 @@ class MusicPlayer:
         while True:
             # Wait until songs are in the queue
             await self.songs_in_queue.wait()
+            if self.auto_leave is not None:
+                self.auto_leave.cancel()
+                self.auto_leave = None
+            
             self.songs_in_queue.clear()
             self.play_next_song.clear()
             # Get the current song
@@ -608,15 +630,15 @@ class MusicPlayer:
             # Create the before args to stop the song from ending before the end
             before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
             if self.bot.config['use_avconv']:
-                self._vc.play(discord.FFmpegPCMAudio(self.current.download_url, executable='avconv'),
-                            after=self.toggle_next)
+                self.vc.play(discord.FFmpegPCMAudio(self.current.download_url, executable='avconv'),
+                             after=self.toggle_next)
 
             else:
-                self._vc.play(discord.FFmpegPCMAudio(self.current.download_url, before_options=before_args),
-                            after=self.toggle_next)
+                self.vc.play(discord.FFmpegPCMAudio(self.current.download_url, before_options=before_args),
+                             after=self.toggle_next)
 
             # Change the volume of the audio
-            self._vc.source = discord.PCMVolumeTransformer(self._vc.source, volume=self.volume)
+            self.vc.source = discord.PCMVolumeTransformer(self.vc.source, volume=self.volume)
             # Calculate when the song should end for np message then wait for next song
             self.time_song_ends = time.time() + self.current.duration
             await self.play_next_song.wait()
@@ -628,410 +650,3 @@ class MusicPlayer:
             # Reset skip
             self.skips.clear()
             self.current_song = None
-
-class Music:
-    '''
-    Music player
-    Create a server music player upon connect command which if music channel is forced
-    '''
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.musicplayers = {}
-        self.music_channels = utils.check_cog_config(self, 'music_channels.json')
-
-    def __unload(self):
-        # Remove listener for when every one leaves the voice without disconnecting bot
-        self.bot.remove_listener(self.on_voice_state_update, "on_voice_state_update")
-
-        # Disconnect the bot from all active guilds
-        # When reloading/unloading then delete the music player
-        for guild, player in self.musicplayers.copy().items():
-            asyncio.ensure_future(player.disconnect(self.bot.user, force=True, reloaded=True))
-            self.bot.logger.info(f'Forcefully deleted {guild} music player')
-            del self.musicplayers[guild]
-
-    async def __local_check(self, ctx):
-        return utils.check_enabled(ctx)
-
-    @commands.command()
-    @commands.guild_only()
-    @permissions.check_admin()
-    async def setmusicchannel(self, ctx):
-        '''Sets the channel command is typed in as the music channel for that server '''
-
-        removed = False
-        # Check if the guild has set a music channel
-        if str(ctx.guild.id) in self.music_channels:
-            # Check if they are removing the channel or moving it
-            if self.music_channels[str(ctx.guild.id)] != ctx.channel.id:
-                self.music_channels[str(ctx.guild.id)] = ctx.channel.id
-
-            else:
-                self.music_channels.pop(str(ctx.guild.id))
-                removed = True
-        else:
-            # IF they don't have one make the one the command is typed in the channel
-            self.music_channels[str(ctx.guild.id)] = ctx.channel.id
-
-        # Save the json file
-        utils.save_cog_config(self, 'music_channels.json', self.music_channels)
-
-        # Tell the user the right message
-        if removed:
-            await ctx.send('This channel is no longer the music channel for the server.')
-            log_msg = (f'Flandre/data/music/music_channels.json has been saved. '
-                       f'Reason: {ctx.channel.name} ({ctx.channel.id}) '
-                       'is no longer a logging channel')
-
-            self.bot.logger.info(log_msg)
-
-        else:
-            await ctx.send('This channel has been made the music channel for the server.')
-            log_msg = (f'Flandre/data/music/music_channels.json has been saved. '
-                       f'Reason: {ctx.channel.name} ({ctx.channel.id}) '
-                       'has been made a logging channel')
-
-            self.bot.logger.info(log_msg)
-
-    @commands.command()
-    @commands.guild_only()
-    async def connect(self, ctx):
-        ''' Connects Bot to voice channel if not in one. Moves to channel if in already in one '''
-
-
-        # Check if the have a music player
-        if str(ctx.guild.id) not in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                # Create the music player for the guild and connect it
-                self.musicplayers[str(ctx.guild.id)] = MusicPlayer(self.bot)
-                self.bot.logger.info(f'Created Music Player for {ctx.guild.name} ({ctx.guild.id})')
-                await self.musicplayers[str(ctx.guild.id)].connect(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    # Create the music player for the guild and connect it
-                    self.musicplayers[str(ctx.guild.id)] = MusicPlayer(self.bot)
-                    log_msg = f'Created Music Player for {ctx.guild.name} ({ctx.guild.id})'
-                    self.bot.logger.info(log_msg)
-                    await self.musicplayers[str(ctx.guild.id)].connect(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channel
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            # If they have a music player
-            # Check if the channel is the forced music channel and tell the bot to connect/move
-            if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                await self.musicplayers[str(ctx.guild.id)].connect(ctx)
-
-            else:
-                # Tell user that commands have to go in the force channel
-                music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-
-    @commands.command()
-    @commands.guild_only()
-    async def disconnect(self, ctx):
-        ''' Disconnect the bot from the voice channel (mod only) '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                # Disconnect the bot and delete the player if successful
-                done = await self.musicplayers[str(ctx.guild.id)].disconnect(ctx.author)
-                if done:
-                    del self.musicplayers[str(ctx.guild.id)]
-                    log_msg = f'Removed Music Player for {ctx.guild.name} ({ctx.guild.id})'
-                    self.bot.logger.info(log_msg)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    # Disconnect the bot and delete the player if successful
-                    done = await self.musicplayers[str(ctx.guild.id)].disconnect(ctx.author)
-                    if done:
-                        del self.musicplayers[str(ctx.guild.id)]
-                        log_msg = f'Removed Music Player for {ctx.guild.name} ({ctx.guild.id})'
-                        self.bot.logger.info(log_msg)
-
-                else:
-                    # Tell user that commands have to go in the force channel
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    async def add(self, ctx, *, link: str):
-        ''' Add command <Youtube Link/Soundcloud Link/Search term> '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                # Try to add the link as a song
-                await self.musicplayers[str(ctx.guild.id)].add_queue(ctx, link)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    # Try to add the link as a song
-                    await self.musicplayers[str(ctx.guild.id)].add_queue(ctx, link)
-
-                else:
-                    # Tell user that commands have to go in the force channel
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    async def skip(self, ctx):
-        ''' Vote skip '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].skip(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].skip(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channel
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    @permissions.check_mod()
-    async def forceskip(self, ctx):
-        ''' Force skip '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].skip(ctx, force=True)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].skip(ctx, force=True)
-
-                else:
-                    # Tell user that commands have to go in the force channel
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command(aliases=["vol"])
-    @commands.guild_only()
-    @permissions.check_mod()
-    async def volume(self, ctx, percent: int):
-        ''' Volume command <0 - 100 %> '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].change_volume(ctx, percent)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].change_volume(ctx, percent)
-
-                else:
-                    # Tell user that commands have to go in the force channel
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    @permissions.check_mod()
-    async def pause(self, ctx):
-        ''' Pause current song '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].pause_music(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].pause_music(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channe
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    @permissions.check_mod()
-    async def resume(self, ctx):
-        ''' Resume current song '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].resume_music(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].resume_music(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channe
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    @permissions.check_mod()
-    async def clear(self, ctx):
-        ''' Clear the queue '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].clear_queue(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].clear_queue(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channe
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command()
-    @commands.guild_only()
-    async def queue(self, ctx):
-        ''' Show next few songs in the queue '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].show_queue(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].show_queue(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channe
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    @commands.command(aliases=["np"])
-    @commands.guild_only()
-    async def nowplaying(self, ctx):
-        ''' Show current playing song '''
-
-        # Check if the have a music player
-        if str(ctx.guild.id) in self.musicplayers:
-            # Check if they are forcing a music channel
-            if str(ctx.guild.id) not in self.music_channels:
-                await self.musicplayers[str(ctx.guild.id)].now_playing(ctx)
-
-            else:
-                # Check if the channel is the forced music channel
-                if ctx.channel.id == self.music_channels[str(ctx.guild.id)]:
-                    await self.musicplayers[str(ctx.guild.id)].now_playing(ctx)
-
-                else:
-                    # Tell user that commands have to go in the force channe
-                    music_channel = self.bot.get_channel(self.music_channels[str(ctx.guild.id)])
-                    await ctx.send(f'Music commands need to be done in {music_channel.mention}')
-
-        else:
-            await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
-
-    async def on_voice_state_update(self, member, before, after):
-        ''' When voice channel update happens '''
-        if before.channel is None:
-            guild = after.channel.guild
-        else:
-            guild = before.channel.guild
-
-        if str(guild.id) in self.musicplayers and member.id != self.bot.user.id:
-            voice = self.musicplayers[str(guild.id)]._vc
-            channelmembers = voice.channel.members
-
-            # Do a check then wait 5 seconds if true
-            if len(channelmembers) == 1:
-                await asyncio.sleep(5)
-
-                # Do check again
-                channelmembers = voice.channel.members
-                if len(channelmembers) == 1:
-                    done = await self.musicplayers[str(guild.id)].disconnect(self.bot.user, force=True)
-
-                    if done:
-                        if str(guild.id) in self.musicplayers:
-                            del self.musicplayers[str(guild.id)]
-                        self.bot.logger.info(f'Removed Music Player for {guild.name} ({guild.id})')
-            else:
-                if str(guild.id) in self.musicplayers:
-                    total_votes = len(voice.skips)
-                    skips_needed = round(len(voice.channel.members) * 0.6)
-                    # It the number of enough to pass skip
-                    if total_votes >= skips_needed:
-                        voice.skips.clear()
-                        voice._vc.stop()
-                        channel = voice.text_channel
-                        await channel.send('A user has left the channel, and the skips needed now match'
-                                        ' the current number of skips!! Skipping song')
-
-
-
-def setup(bot):
-    ''' Setup to add cog to bot'''
-    cog = Music(bot)
-    bot.add_listener(cog.on_voice_state_update, "on_voice_state_update")
-    bot.add_cog(cog)
