@@ -1,5 +1,6 @@
 ''' A cog for Flandre made for the programming guild '''
 import asyncio
+import datetime
 
 import discord
 from discord.ext import commands
@@ -85,6 +86,44 @@ class Programming:
         await ctx.author.remove_roles(guest_role)
         await asyncio.sleep(5)
         await ctx.author.add_roles(member_role)
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_mod()
+    @check_server()
+    async def prune(self, ctx, days: int = 14):
+        '''
+        Removes all guests that have been on the server for more than X days
+        The age is 14 days, or 2 weeks
+        '''
+
+        guest_role = discord.utils.get(ctx.guild.roles, name='Guest')
+
+        if guest_role is None:
+            return
+
+        prune_date = datetime.datetime.now() - datetime.timedelta(days=days)
+
+        def prune_filter(member):
+            if len(member.roles) == 2:
+                if guest_role in member.roles:
+                    if member.joined_at < prune_date:
+                        return True
+            return False
+
+        to_be_pruned = filter(prune_filter, ctx.guild.members)
+        for member in to_be_pruned:
+            await ctx.guild.kick(member, f'Pruning guests older than {days} days')
+
+        guild_id = str(ctx.guild.id)
+        if guild_id in self.logging_channels:
+            log_channel = self.bot.get_channel(self.logging_channels[guild_id])
+            timestamp = ctx.message.created_at
+            desc = f'Pruned {len(to_be_pruned)} guests older than {days} days.'
+            embed = discord.Embed(type='rich', description=desc, timestamp=timestamp)
+            embed.set_author(name='Prune Log')
+            embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
+            await log_channel.send(embed=embed)
 
     @commands.group()
     @commands.guild_only()
