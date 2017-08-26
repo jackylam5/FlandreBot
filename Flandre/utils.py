@@ -248,6 +248,58 @@ def check_core_folders():
     if not isdir('Flandre/cogs'):
         logger.warning("No cogs folder found. It has been made for you at 'Flandre/cogs'")
         mkdir('Flandre/cogs')
+    
+    if not isdir('Flandre/data'):
+        logger.warning('No data folder found. It has been made for you at `Flandre/data`')
+        mkdir('Flandre/data')
+
+def save_cog_file(cogname, filename, data):
+    '''
+    Used to save the the file in the cogs data folder
+    Will create the data folder and file if they are missing
+    '''
+
+    if not isdir(f'Flandre/data/{cogname}'):
+        logger.warning(f'`Flandre/data/{cogname}` does not exist. It has been made for you')
+        mkdir(f'Flandre/data/{cogname}')
+
+    # Try to save the file
+    try:
+        with open(f'Flandre/data/{cogname}/{filename}', 'w') as file:
+            json.dump(data, file, indent=4, sort_keys=True)
+
+    except Exception as err:
+        logger.critical(f'`Flandre/data/{cogname}/{filename}` could not be saved. Please check it',
+                        exc_info=err)
+    else:
+        logger.info(f'`Flandre/data/{cogname}/{filename}` has been saved.')
+
+def load_cog_file(cogname, filename, default={}):
+    '''
+    Loads the file from the cogs data folder
+    Will create the folder and file is missing using the deafult data given
+    '''
+
+    if not isdir(f'Flandre/data/{cogname}'):
+        logger.warning(f'`Flandre/data/{cogname}` does not exist. It has been made for you')
+        mkdir(f'Flandre/data/{cogname}')
+    
+    # Try to load the file
+    try:
+        with open(f'Flandre/data/{cogname}/{filename}', 'r') as file:
+            return json.load(file)
+    
+    except Exception as err:
+        # Log that the file could not be loaded
+        logger.error(f'`Flandre/data/{cogname}/{filename}` could not be loaded', exc_info=err)
+
+        # Remake the file with the default info
+        with open(f'Flandre/data/{cogname}/{filename}', 'w') as file:
+            json.dump(default, file, indent=4, sort_keys=True)
+        
+        logger.info(f'`Flandre/data/{cogname}/{filename}` has been remade for you')
+
+        return default
 
 async def send_cmd_help(bot, ctx):
     ''' Make the formatting for command groups from context '''

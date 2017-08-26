@@ -8,7 +8,6 @@ from discord.ext import commands
 
 from Flandre import utils, permissions
 
-from . import utils as cogutils
 from .player import MusicPlayer
 
 logger = logging.getLogger(__package__)
@@ -22,7 +21,7 @@ class Music:
     def __init__(self, bot):
         self.bot = bot
         self.musicplayers = {}
-        self.music_channels = cogutils.load_channels_file()
+        self.music_channels = utils.load_cog_file('music', 'channels.json')
 
     def __unload(self):
         # Disconnect the bot from all active guilds
@@ -56,7 +55,7 @@ class Music:
             self.music_channels[str(ctx.guild.id)] = ctx.channel.id
 
         # Save the json file
-        cogutils.save_channels_file(self.music_channels)
+        utils.save_cog_file('music', 'channels.json', self.music_channels)
 
         # Tell the user the right message
         if removed:
