@@ -15,7 +15,7 @@ async def ban_log_message(guild, user, channel):
 
     def find_banned_user(event):
         ''' Find the event for the banned user '''
-        return event.target == user
+        return event.target == user and event.user != guild.me
 
     # Check the audit log to get who banned the user
     ban_event = await guild.audit_logs(limit=5, action=BAN_ACTION).find(find_banned_user)
@@ -28,7 +28,7 @@ async def ban_log_message(guild, user, channel):
         embed.set_author(name='Ban Log')
         embed.set_thumbnail(url=ban_event.target.avatar_url)
         embed.set_footer(text=f'Done by {ban_event.user.name}', icon_url=ban_event.user.avatar_url)
-        
+
         if ban_event.reason:
             embed.add_field(name='Reason:', value=f'```{ban_event.reason}```')
 
@@ -43,7 +43,7 @@ async def kick_log_message(guild, member, channel):
 
     def find_kicked_user(event):
         ''' Find the event for the kicked user '''
-        return event.target == member
+        return event.target == member and event.user != guild.me
 
     # Check the audit log to get who kicked the user
     kick_event = await guild.audit_logs(limit=5, action=KICK_ACTION).find(find_kicked_user)
