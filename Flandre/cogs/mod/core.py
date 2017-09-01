@@ -106,7 +106,7 @@ class Mod:
                 timestamp = ctx.message.created_at
                 embed = logs.create_log_embed('Ban Log', user, ctx.author, timestamp, reason)
                 await log_channel.send(embed=embed)
-    
+
     @commands.command()
     @commands.guild_only()
     @permissions.check_mod()
@@ -140,6 +140,46 @@ class Mod:
                 timestamp = ctx.message.created_at
                 embed = logs.create_log_embed('Softban Log', user, ctx.author, timestamp, reason)
                 await log_channel.send(embed=embed)
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def unban(self, ctx, uid: int, *, reason: str = None):
+        ''' Unbans the id given with the reason if it is given '''
+
+        bans = await ctx.guild.bans()
+        user = None
+
+        if bans:
+            for ban in bans:
+                if ban.user.id == uid:
+                    user = ban.user
+                    break
+
+        if user is not None:
+            try:
+                if reason is None:
+                    await ctx.guild.unban(user)
+                    await ctx.send("Done. User unbanned")
+                else:
+                    reason = cogutils.clean_reason(self.bot, reason)
+                    await ctx.guild.unban(user, reason=reason)
+                    await ctx.send(f"Done. User unbanned for reason: `{reason}`")
+
+            except discord.errors.Forbidden:
+                await ctx.send("I lack the permissions to unban")
+
+            except discord.errors.HTTPException:
+                await ctx.send("Something went wrong. Please try again")
+
+            else:
+                if str(ctx.guild.id) in self.logging_channels:
+                    log_channel = self.bot.get_channel(self.logging_channels[str(ctx.guild.id)])
+                    timestamp = ctx.message.created_at
+                    embed = logs.create_log_embed('Unban Log', user, ctx.author, timestamp, reason)
+                    await log_channel.send(embed=embed)
+        else:
+            ctx.send(f'I can not find the banned user with ID: {uid}')
 
     async def member_ban(self, guild, user):
         ''' Event that is run on a member ban '''
