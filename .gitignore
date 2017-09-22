@@ -100,3 +100,4 @@ Flandre/config.json
 *~
 *.bak
 
+.vscode/settings.json

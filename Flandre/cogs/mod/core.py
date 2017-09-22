@@ -18,6 +18,8 @@ class Mod:
     def __init__(self, bot):
         self.bot = bot
         self.logging_channels = utils.load_cog_file('mod', 'logging_channels.json')
+        self.message_channels = utils.load_cog_file('mod', 'message_channels.json')
+        self.clean_up_messages = []
 
     def __unload(self):
         ''' Remove listeners '''
@@ -180,6 +182,76 @@ class Mod:
                     await log_channel.send(embed=embed)
         else:
             ctx.send(f'I can not find the banned user with ID: {uid}')
+    
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def messagechannel(self, ctx):
+        '''
+        Sets the channel command is typed in as the message channel for that server
+        Used to put message delete in this channel
+        '''
+        removed = False
+        if str(ctx.guild.id) in self.message_channels:
+            self.message_channels.pop(str(ctx.guild.id))
+            removed = True
+        else:
+            self.message_channels[str(ctx.guild.id)] = ctx.channel.id
+
+        utils.save_cog_file('mod', 'message_channels.json', self.message_channels)
+
+        if removed:
+            await ctx.send('This channel is no longer the message channel for the cleanup actions.')
+        else:
+            await ctx.send('This channel has been made the message channel for the cleanup actions.')
+
+    @commands.command()
+    @commands.guild_only()
+    @permissions.check_mod()
+    async def cleanup(self, ctx, amount: int = 2):
+        '''
+        Deletes the amount of messages given in that channel
+        Defaults to 2 if no argument is given
+        '''
+
+        if amount < 2 or amount > 100:
+            await ctx.send('This command has to delete between 2 and 100 messages')
+        else:
+            to_delete = []
+
+            # Get the messages to delete (amount = number)
+            async for log_message in ctx.channel.history(limit=amount, before=ctx.message):
+                to_delete.append(log_message)
+                self.clean_up_messages.append(log_message.id)
+
+            try:
+                await ctx.channel.delete_messages(to_delete)
+
+            except discord.errors.Forbidden:
+                await ctx.send("I can't do that. I lack the permissions to do so")
+
+            except discord.errors.HTTPException:
+                await ctx.send("Something went wrong. Please try again")
+
+            else:
+                # Log in the clean up in log_channel if set up
+                log_channel = None
+                if str(ctx.guild.id) in self.message_channels:
+                    log_channel = self.bot.get_channel(self.message_channels[str(ctx.guild.id)])
+
+                    desc = (f'Channel: {ctx.channel.mention}\n'
+                            f'Amount: {len(to_delete)}')
+                    embed = discord.Embed(type='rich', description=desc)
+                    embed.set_author(name='Cleanup Log')
+                    embed.set_footer(text=f'Done by {ctx.author.name}', icon_url=ctx.author.avatar_url)
+                    await log_channel.send(embed=embed)
+
+    @cleanup.after_invoke
+    async def after_cleanup_command(self, ctx):
+        ''' Delete the cleanup command message after it is done '''
+        if ctx.invoked_subcommand:
+            self.clean_up_messages.append(ctx.message.id)
+            await ctx.message.delete()
 
     async def member_ban(self, guild, user):
         ''' Event that is run on a member ban '''
