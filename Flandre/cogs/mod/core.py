@@ -7,7 +7,7 @@ from discord.ext import commands
 
 from Flandre import utils, permissions
 
-from . import logs
+from . import logs, filter
 from . import utils as cogutils
 
 logger = logging.getLogger(__package__)
@@ -20,6 +20,7 @@ class Mod:
         self.logging_channels = utils.load_cog_file('mod', 'logging_channels.json')
         self.message_channels = utils.load_cog_file('mod', 'message_channels.json')
         self.clean_up_messages = []
+        self.filter = utils.load_cog_file('mod', 'filter.json')
 
     def __unload(self):
         ''' Remove listeners '''
@@ -253,6 +254,72 @@ class Mod:
             self.clean_up_messages.append(ctx.message.id)
             await ctx.message.delete()
 
+    @commands.group(name='filter')
+    @commands.guild_only()
+    async def _filter(self, ctx):
+        '''
+        Adds or removes words from the filter
+        It ignores case and will also remove the word if it is contained in another
+        It can also remove full sentences if needed
+        '''
+
+        if ctx.invoked_subcommand is None:
+            pages = await utils.send_cmd_help(self.bot, ctx)
+            for page in pages:
+                await ctx.send(page)
+    
+    @_filter.group(name='server')
+    @commands.guild_only()
+    async def filter_server(self, ctx):
+        '''
+        Adds or removes words from the server wide filter
+        It ignores case and will also remove the word if it is contained in another
+        It can also remove full sentences if needed
+        '''
+
+        if ctx.subcommand_passed == 'server':
+            pages = await utils.send_cmd_help(self.bot, ctx)
+            for page in pages:
+                await ctx.send(page)
+    
+    @filter_server.command(name='show')
+    @commands.guild_only()
+    async def filter_server_show(self, ctx):
+        ''' Shows the current filtered words and sentences for the server
+            Shows each on a single line will also send mutiple messages if needed
+        '''
+
+        if ctx.guild.id in self.filter:
+            await filter.make_filter_list(ctx, self.filter)
+        else:
+            await ctx.send('Nothing is being filtered in this server at all')
+    
+    @filter_server.command(name='add')
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def filter_server_add(self, ctx, *words: str):
+        '''
+        Adds words or sentences to the server wide filter.
+        Make sure to use double quotes for sentences
+        Examples:
+        filter server add word1 word2 word3
+        filter server add "This is a sentence"
+        '''
+
+        # Check if any words were suppiled
+        if words:
+            # Check if bot can even delete messages
+            # As there is no point in adding to filter if it can't
+            if ctx.channel.permissions_for(ctx.me).manage_messages:
+                self.filter = await filter.filter_add(ctx, self.filter, words)
+            else:
+                msg = (f"{ctx.author.mention}, I don't have the permissions to delete messages "
+                       "so I can't filter anything")
+                await ctx.send(msg)
+        else:
+            await ctx.send(f'{ctx.author.mention}, You need to give me something to filter')
+
+    
     async def member_ban(self, guild, user):
         ''' Event that is run on a member ban '''
 
