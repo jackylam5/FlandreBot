@@ -319,7 +319,24 @@ class Mod:
         else:
             await ctx.send(f'{ctx.author.mention}, You need to give me something to filter')
 
-    
+    @filter_server.command(name='remove')
+    @commands.guild_only()
+    @permissions.check_admin()
+    async def filter_server_remove(self, ctx, *words: str):
+        '''
+        Removes words or sentences from the server wide filter
+        Make sure to use double quotes for sentences
+        Examples:
+        filter remove word1 word2 word3
+        filter remove "This is a sentence"
+        '''
+
+        # Check if any words were suppiled
+        if words:
+            self.filter = await filter.filter_remove(ctx, self.filter, words)
+        else:
+            await ctx.send(f'{ctx.author.mention}, You haven\'t given anywords to be removed')
+
     async def member_ban(self, guild, user):
         ''' Event that is run on a member ban '''
 
