@@ -20,6 +20,7 @@ class Mod:
         self.logging_channels = utils.load_cog_file('mod', 'logging_channels.json')
         self.message_channels = utils.load_cog_file('mod', 'message_channels.json')
         self.clean_up_messages = []
+        self.filtered_messages = []
         self.filter = utils.load_cog_file('mod', 'filter.json')
 
     def __unload(self):
@@ -27,6 +28,7 @@ class Mod:
 
         self.bot.remove_listener(self.member_ban, "on_member_ban")
         self.bot.remove_listener(self.member_kick, "on_member_remove")
+        self.bot.remove_listener(self.on_message, "on_message")
 
     @commands.command()
     @commands.guild_only()
@@ -407,40 +409,6 @@ class Mod:
         else:
             await ctx.send(f'{ctx.author.mention}, You haven\'t given anywords to be removed')
 
-    @_filter.command()
-    @commands.guild_only()
-    @permissions.check_mod()
-    async def message(self, ctx, *, msg: str = ''):
-        '''
-        Makes the bot send a message when something is filtered
-        No args removes the message
-        Using %user% in the message will make the bot place
-        A mention to the user whose messages was filtered
-        '''
-
-        guild_id = str(ctx.guild.id)
-
-        # Check if anything is being filtered for that server
-        if guild_id in self.filter:
-            # Check is message is empty
-            if msg == '':
-                self.filter[guild_id]['message'] = None
-                await ctx.send(f'{ctx.author.mention}, Filter messages has been removed')
-            else:
-                self.filter[guild_id]['message'] = msg
-                await ctx.send(f'{ctx.author.mention}, Filter messages has been set to: `{msg}`')
-
-            # Save the filter file
-            logger.info((f'{ctx.guild.name} ({ctx.guild.id}) '
-                         'has changed the filter message'))
-
-            utils.save_cog_file('mod', 'filter.json', self.filter)
-
-        else:
-            await ctx.send((f'{ctx.author.mention}, '
-                            'Nothing is being filtered so there '
-                            'is no point in setting a message right now'))
-
     async def member_ban(self, guild, user):
         ''' Event that is run on a member ban '''
 
@@ -458,3 +426,23 @@ class Mod:
         if str(guild.id) in self.logging_channels:
             channel = self.bot.get_channel(self.logging_channels[str(guild.id)])
             await logs.kick_log_message(guild, member, channel)
+
+    async def on_message(self, message):
+        '''
+        Used to check the message for filtered words 
+        or if the user has reach the slowmode limit
+        '''
+
+        if message.author == self.bot.user:
+            return
+
+        # Check the filter
+        filtered = await filter.check_filter(message, self.filter)
+
+        if filtered:
+            # Add the message ID to a list so we know it was filtered
+            # For the message delete embed
+            self.filtered_messages.append(message.id)
+        else:
+            # TODO: check slowmode
+            pass
