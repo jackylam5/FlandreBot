@@ -267,7 +267,7 @@ class Mod:
             pages = await utils.send_cmd_help(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
-    
+
     @_filter.group(name='server')
     @commands.guild_only()
     async def filter_server(self, ctx):
@@ -281,7 +281,7 @@ class Mod:
             pages = await utils.send_cmd_help(self.bot, ctx)
             for page in pages:
                 await ctx.send(page)
-    
+
     @filter_server.command(name='show')
     @commands.guild_only()
     async def filter_server_show(self, ctx):
@@ -293,7 +293,7 @@ class Mod:
             await filter.make_filter_list(ctx, self.filter)
         else:
             await ctx.send('Nothing is being filtered in this server at all')
-    
+
     @filter_server.command(name='add')
     @commands.guild_only()
     @permissions.check_admin()
@@ -336,6 +336,110 @@ class Mod:
             self.filter = await filter.filter_remove(ctx, self.filter, words)
         else:
             await ctx.send(f'{ctx.author.mention}, You haven\'t given anywords to be removed')
+
+    @_filter.group(name='channel')
+    @commands.guild_only()
+    async def filter_channel(self, ctx):
+        '''
+        Adds or removes words from the current channel filter
+        It ignores case and will also remove the word if it is contained in another
+        It can also remove full sentences if needed
+        '''
+
+        if ctx.subcommand_passed == 'channel':
+            pages = await utils.send_cmd_help(self.bot, ctx)
+            for page in pages:
+                await ctx.send(page)
+
+    @filter_channel.command(name='show')
+    @commands.guild_only()
+    async def filter_channel_show(self, ctx):
+        '''
+        Shows the current filtered words and sentences for the current channel
+        Shows each on a single line will also send mutiple messages if needed
+        '''
+
+        if ctx.guild.id in self.filter:
+            await filter.make_filter_list(ctx, self.filter, channel=True)
+        else:
+            await ctx.send('Nothing is being filtered in this server at all')
+
+    @filter_channel.command(name='add')
+    @commands.guild_only()
+    @permissions.check_mod()
+    async def filter_channel_add(self, ctx, *words: str):
+        '''
+        Adds words or sentences to the current channel filter.
+        Make sure to use double quotes for sentences
+        Examples:
+        filter server add word1 word2 word3
+        filter server add "This is a sentence"
+        '''
+
+        # Check if any words were suppiled
+        if words:
+            # Check if bot can even delete messages
+            # As there is no point in adding to filter if it can't
+            if ctx.channel.permissions_for(ctx.me).manage_messages:
+                self.filter = await filter.filter_add(ctx, self.filter, words, channel=True)
+            else:
+                msg = (f"{ctx.author.mention}, I don't have the permissions to delete messages "
+                       "so I can't filter anything")
+                await ctx.send(msg)
+        else:
+            await ctx.send(f'{ctx.author.mention}, You need to give me something to filter')
+
+    @filter_channel.command(name='remove')
+    @commands.guild_only()
+    @permissions.check_mod()
+    async def filter_channel_remove(self, ctx, *words: str):
+        '''
+        Removes words or sentences from the current channel filter
+        Make sure to use double quotes for sentences
+        Examples:
+        filter remove word1 word2 word3
+        filter remove "This is a sentence"
+        '''
+
+        # Check if any words were suppiled
+        if words:
+            self.filter = await filter.filter_remove(ctx, self.filter, words, channel=True)
+        else:
+            await ctx.send(f'{ctx.author.mention}, You haven\'t given anywords to be removed')
+
+    @_filter.command()
+    @commands.guild_only()
+    @permissions.check_mod()
+    async def message(self, ctx, *, msg: str = ''):
+        '''
+        Makes the bot send a message when something is filtered
+        No args removes the message
+        Using %user% in the message will make the bot place
+        A mention to the user whose messages was filtered
+        '''
+
+        guild_id = str(ctx.guild.id)
+
+        # Check if anything is being filtered for that server
+        if guild_id in self.filter:
+            # Check is message is empty
+            if msg == '':
+                self.filter[guild_id]['message'] = None
+                await ctx.send(f'{ctx.author.mention}, Filter messages has been removed')
+            else:
+                self.filter[guild_id]['message'] = msg
+                await ctx.send(f'{ctx.author.mention}, Filter messages has been set to: `{msg}`')
+
+            # Save the filter file
+            logger.info((f'{ctx.guild.name} ({ctx.guild.id}) '
+                         'has changed the filter message'))
+
+            utils.save_cog_file('mod', 'filter.json', self.filter)
+
+        else:
+            await ctx.send((f'{ctx.author.mention}, '
+                            'Nothing is being filtered so there '
+                            'is no point in setting a message right now'))
 
     async def member_ban(self, guild, user):
         ''' Event that is run on a member ban '''
