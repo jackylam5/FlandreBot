@@ -29,6 +29,7 @@ class Mod:
         self.bot.remove_listener(self.member_ban, "on_member_ban")
         self.bot.remove_listener(self.member_kick, "on_member_remove")
         self.bot.remove_listener(self.on_message, "on_message")
+        self.bot.remove_listener(self.on_message_edit, "on_message_edit")
 
     @commands.command()
     @commands.guild_only()
@@ -446,3 +447,19 @@ class Mod:
         else:
             # TODO: check slowmode
             pass
+
+    async def on_message_edit(self, before, after):
+        '''
+        Check the filter again when the message is edited
+        '''
+
+        if after.author == self.bot.user:
+            return
+
+        # Check the filter
+        filtered = await filter.check_filter(after, self.filter)
+
+        if filtered:
+            # Add the message ID to a list so we know it was filtered
+            # For the message delete embed
+            self.filtered_messages.append(after.id)
