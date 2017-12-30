@@ -9,6 +9,8 @@ from discord.ext import commands
 
 from .. import utils
 
+numberReactions = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣']
+
 
 class General:
     ''' Holds commands that don't have a suitable place else where '''
@@ -18,8 +20,6 @@ class General:
 
     def __unload(self):
         ''' Remove listeners '''
-
-        self.bot.remove_listener(self.check_poll_votes, "on_message")
     
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
@@ -30,6 +30,20 @@ class General:
 
         await ctx.send('Pong')
 
+    @commands.command(hidden=True)
+    async def reacttest(self, ctx):
+        ''' Pong '''
+        
+        await ctx.send('test')    
+        lastMessage = await self.getLastMessage(ctx.message.channel)
+        #for number in numberReactions:
+        #    await lastMessage.add_reaction(number)
+        await lastMessage.add_reaction('9⃣')
+        lastMessage = await self.getLastMessage(ctx.message.channel)
+        list = lastMessage.reactions
+        print(list)
+
+            
     @commands.command()
     async def roll(self, ctx, *number: str):
         '''
@@ -165,22 +179,22 @@ class General:
         '''
         Starts a poll format Is this a poll?;Yes;No;Maybe
         '''
-        if ctx.channel.id not in self.polls:
+        if ctx.message.author.id not in self.polls:
             check = " ".join(text).lower()
             # Make sure everyone isn't mentioned
             if "@everyone" in check or "@here" in check:
                 await ctx.send("Nice try.")
             else:
                 # Create Poll
-                poll = Poll(ctx.message, text, self)
+                poll = Poll(ctx.message, text, self, self.bot)
                 if poll.valid:
-                    self.polls[ctx.channel.id] = poll
+                    self.polls[ctx.message.author.id] = poll
                     self.bot.logger.info(f"New Poll made in channel: {ctx.channel.id}")
                     await poll.start()
                 else:
                     await ctx.send("poll question;option1;option2 (...)")
         else:
-            await ctx.send("A poll is already ongoing in this channel.")
+            await ctx.send("You already started a poll.")
 
     @poll.command()
     @commands.guild_only()
@@ -188,49 +202,46 @@ class General:
         '''
         Stops the poll
         '''
-        if ctx.channel.id in self.polls:
-            poll = self.polls[ctx.channel.id]
-            if poll.author == ctx.author.id:
-                await poll.endPoll()
-                del poll
-            else:
-                await ctx.send("Only the author can stop the poll.")
+        if ctx.message.author.id in self.polls:
+            poll = self.polls[ctx.message.author.id]
+            await poll.end_poll()
+            del poll
         else:
             await ctx.send("There's no poll ongoing in this channel.")
-
-    async def check_poll_votes(self, message):
-        ''' Check when people vote when poll is on '''
-
-        if message.author.id != self.bot.user.id:
-            if message.channel.id in self.polls:
-                self.polls[message.channel.id].check_answer(message)
 
     def remove_poll(self, pid):
         ''' Removes the poll '''
         self.polls.pop(pid)
+        
+    async def getLastMessage(self, channel):
+        async for message in channel.history(limit=10):
+            if message.author.id == self.bot.user.id:
+                print('a')
+                return message
 
 class Poll():
     ''' Poll Class
     Holds the poll for the channel it was started in
     '''
 
-    def __init__(self, message, text, cog):
+    def __init__(self, message, text, cog, bot):
         self.channel = message.channel
         self.author = message.author.id
         self.cog = cog
+        self.bot = bot
+        self.messageID = None
         msg = text.split(";")
-        if len(msg) < 2: # Needs at least one question and 2 choices
+        if len(msg) < 2 or len(msg) > 10: # Needs at least one question and 2 choices
             self.valid = False
             return None
         else:
             self.valid = True
-        self.already_voted = []
         self.question = msg[0]
         msg.remove(self.question)
         self.answers = {}
         i = 1
         for answer in msg: # {id : {answer, votes}}
-            self.answers[i] = {"ANSWER" : answer, "VOTES" : 0}
+            self.answers[i] = {"ANSWER" : answer}
             i += 1
 
     async def start(self):
@@ -239,43 +250,47 @@ class Poll():
         for pid, data in self.answers.items():
             answer = data['ANSWER']
             msg += f"{pid}. {answer}\n"
-        msg += "\nType the number to vote!"
+        msg += "\nReact to vote!"
         embed = discord.Embed(type='rich', description=msg)
         embed.set_author(name='Poll')
         await self.channel.send(embed=embed)
-        await asyncio.sleep(30)
-        if self.valid:
-            await self.end_poll()
+        lastMessage = await self.getLastMessage(self.bot, self.channel)
+        self.messageID = lastMessage.id
+        for x in range(len(self.answers.items())):
+            await lastMessage.add_reaction(numberReactions[x])
+        try:
+            lastMessage = await self.channel.get_message(self.messageID)
+            await lastMessage.pin()
+        except:
+            print('something went wrong')
 
     async def end_poll(self):
         ''' Used to end the poll '''
         self.valid = False
         msg = f"**POLL ENDED!**\n\n{self.question}\n\n"
-        for data in self.answers.values():
+        lastMessage = await self.channel.get_message(self.messageID)
+        reactions = lastMessage.reactions
+        print(len(reactions))
+        for pid, data in self.answers.items():
             answer = data['ANSWER']
-            votes = data['VOTES']
+            votes = reactions[pid-1].count - 1
             msg += f"{answer} - {votes} votes\n"
         embed = discord.Embed(type='rich', description=msg)
         embed.set_author(name='Poll')
         await self.channel.send(embed=embed)
-        self.cog.remove_poll(self.channel.id)
+        self.cog.remove_poll(self.author)
         self.cog.bot.logger.info(f"Poll deleted for channel: {self.channel.id}")
-
-    def check_answer(self, message):
-        ''' Used to check if the users answer is valid '''
         try:
-            i = int(message.content)
-            if i in self.answers.keys():
-                if message.author.id not in self.already_voted:
-                    data = self.answers[i]
-                    data["VOTES"] += 1
-                    self.answers[i] = data
-                    self.already_voted.append(message.author.id)
-        except ValueError:
+            await lastMessage.unpin()
+        except:
             pass
+
+    async def getLastMessage(self, bot, channel):
+        async for message in channel.history(limit=10):
+            if message.author.id == bot.user.id:
+                return message
 
 def setup(bot):
     ''' Setup function to add cog to bot '''
     cog = General(bot)
-    bot.add_listener(cog.check_poll_votes, "on_message")
     bot.add_cog(cog)
