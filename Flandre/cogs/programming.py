@@ -84,8 +84,8 @@ class Programming:
             return
 
         await ctx.author.remove_roles(guest_role)
-        await asyncio.sleep(5)
         await ctx.author.add_roles(member_role)
+        await ctx.message.delete()
 
     @commands.command()
     @commands.guild_only()
