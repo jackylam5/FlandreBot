@@ -9,7 +9,7 @@ class Emote(commands.Cog):
         self.bot = bot
         self.emotes = utils.check_cog_config(self, 'emotes.json')
         self.emote_log = utils.check_cog_config(self, 'emote_log.json')
-        self.transparency_emote = '<:transparent:650746475755864064>'
+        self.transparency_emote = 'INSERT TRANSPARENT EMOTE HERE'
 
     def __unload(self):
         ''' Remove listeners '''

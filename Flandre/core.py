@@ -86,15 +86,17 @@ class Bot(commands.AutoShardedBot):
             print("\tReason: {0}".format(err))
 
             # Create new config file for user with defaults added in
-            tempconfig = {'token': '',
-                          'prefix': '!',
-                          'ownerid': [],
-                          'description': ('FlandreBot always a work in progress. '
-                                          'Written by Jackylam5 and maware'),
-                          'pm_help': True,
-                          'game': 'scrub',
-                          'use_avconv': True
-                          }
+            tempconfig = {"description": "FlandreBot always a work in progress. Written by Jackylam5 and maware",
+                          "game": "scrub",
+                          "ownerid": [118747700064813056],
+                          "pm_help": true,
+                          "prefix": "!",
+                          "token": "INSERT TOKEN HERE",
+                          "use_avconv": false,
+                          "pixiv_id": "INSERT PIXIV ID HERE",
+                          "pixiv_password": "INSERT PASSWORD HERE",
+                          "saucenao_api_key": "INSERT SAUCENAO API KEY HERE"
+                        }
 
             with open(f'{__package__}/config.json', 'w') as config:
                 json.dump(tempconfig, config, indent=4, sort_keys=True)
