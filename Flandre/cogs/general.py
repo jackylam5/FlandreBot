@@ -12,7 +12,7 @@ from .. import utils
 numberReactions = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣']
 
 
-class General:
+class General(commands.Cog):
     ''' Holds commands that don't have a suitable place else where '''
     def __init__(self, bot):
         self.bot = bot

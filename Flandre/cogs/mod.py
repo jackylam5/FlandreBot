@@ -60,7 +60,7 @@ class BanLogger:
                                 file=discord.File(logfile, filename=f"{self.user.name}_ban.log"))
         logfile.close()
 
-class Mod:
+class Mod(commands.Cog):
     ''' Moderation tools '''
 
     def __init__(self, bot):
@@ -489,8 +489,7 @@ class Mod:
                 self.clean_up_messages.append(log_message.id)
 
             try:
-                reason = f'Cleanup messages by {ctx.author.name}'
-                await ctx.channel.delete_messages(to_delete, reason=reason)
+                await ctx.channel.delete_messages(to_delete)
 
             except discord.errors.Forbidden:
                 await ctx.send("I can't do that. I lack the permissions to do so")

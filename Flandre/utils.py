@@ -12,7 +12,7 @@ from discord.ext import commands
 from . import permissions, errors
 
 
-class Cogdisable:
+class Cogdisable(commands.Cog):
     ''' Allows guilds to disable certain cogs '''
 
     def __init__(self, bot):
@@ -147,7 +147,7 @@ class Cogdisable:
         msg += '```'
         await ctx.send(msg)
 
-class Reloader:
+class Reloader(commands.Cog):
     ''' Allows owners to load/unload/reload cogs easily '''
 
     def __init__(self, bot):

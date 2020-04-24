@@ -6,15 +6,15 @@ Written by jackylam5 and maware
 '''
 
 import sys
-import Flandre
+from . import core
 
 if __name__ == '__main__':
     try:
-        BOT = Flandre.Bot()
-    except Flandre.MissingConfigFile:
+        BOT = core.Bot()
+    except core.MissingConfigFile:
         sys.exit()
     else:
         try:
             BOT.run()
-        except Flandre.LoginError:
+        except core.LoginError:
             sys.exit()

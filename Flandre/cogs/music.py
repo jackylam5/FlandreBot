@@ -232,7 +232,10 @@ class MusicPlayer:
                         'ignoreerrors': True,
                         'quiet': True,
                         'playliststart': start_pos,
-                        'playlistend': (start_pos + 19)
+                        'playlistend': (start_pos + 19),
+						'reconnect': 1,
+						'reconnect_streamed': 1,
+						'reconnect_delay_max' : 5
                        }
 
                 if search:
@@ -629,7 +632,7 @@ class MusicPlayer:
             self.skips.clear()
             self.current_song = None
 
-class Music:
+class Music(commands.Cog):
     '''
     Music player
     Create a server music player upon connect command which if music channel is forced

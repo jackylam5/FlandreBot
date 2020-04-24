@@ -7,7 +7,7 @@ from discord.ext import commands
 from .. import permissions, utils
 
 
-class Guildstuff:
+class Guildstuff(commands.Cog):
     ''' Handles Guild welcome and leaving messages and custom tags '''
 
     def __init__(self, bot):

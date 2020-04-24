@@ -19,6 +19,7 @@ from discord.ext import commands
 from . import utils
 from .errors import LoginError, MissingConfigFile, CogDisabled
 
+
 def make_logger():
     ''' Make the logger for the bot
     '''
@@ -29,7 +30,7 @@ def make_logger():
 
     # Make file handler for log file
     file_handler = RotatingFileHandler(filename=f'{__package__}.log',
-                                       maxBytes=5*1024*1024,
+                                       maxBytes=5 * 1024 * 1024,
                                        backupCount=5)
 
     file_handler.setLevel(logging.DEBUG)
@@ -41,6 +42,7 @@ def make_logger():
     logger.addHandler(file_handler)
 
     return logger
+
 
 class Bot(commands.AutoShardedBot):
     '''
@@ -92,7 +94,7 @@ class Bot(commands.AutoShardedBot):
                           'pm_help': True,
                           'game': 'scrub',
                           'use_avconv': True
-                         }
+                          }
 
             with open(f'{__package__}/config.json', 'w') as config:
                 json.dump(tempconfig, config, indent=4, sort_keys=True)
@@ -131,7 +133,8 @@ class Bot(commands.AutoShardedBot):
                           f'{self.user.name} ({self.user.id}) using {self.shard_count} shards'))
 
         # Change the bots game to what is in the config
-        await self.change_presence(game=discord.Game(name=self.config['game']))
+        activity = discord.Game(name=self.config['game'])
+        await self.change_presence(activity=activity)
 
         # Check for data and cog foders
         utils.check_core_folders(self.logger)

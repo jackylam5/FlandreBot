@@ -516,7 +516,7 @@ class AnimePool:
 
                 await asyncio.sleep(round(time_left.total_seconds()))
 
-class Anime:
+class Anime(commands.Cog):
     '''
     Cog that has all anime and manga related items.
     Uses the anilist api to get info about that anime/manga
@@ -832,6 +832,7 @@ class Anime:
         else:
             await ctx.send("I couldn't find anything from MAL with that search")
     
+    @commands.Cog.listener()
     async def anime_reference(self, message):
         '''
         Looks for anime wrapped in {} in a message and posts MAL info about it

@@ -8,7 +8,7 @@ from youtube_dl import version
 from .. import permissions, utils
 
 
-class Info:
+class Info(commands.Cog):
     '''
     Info cog holds info about bot
     Also can show guild and user info
@@ -18,10 +18,10 @@ class Info:
         self.bot = bot
         self.past_names = utils.check_cog_config(self, 'past_names.json')
 
-    def __unload(self):
-        ''' Remove listeners '''
+    #def __unload(self):
+    #    ''' Remove listeners '''
 
-        self.bot.remove_listener(self.check_names, "on_member_update")
+    #    self.bot.remove_listener(self.check_names, "on_member_update")
 
     async def __local_check(self, ctx):
         return utils.check_enabled(ctx)
@@ -253,7 +253,8 @@ class Info:
         else:
             await ctx.send(f'No channel with id: `{channelid}`')
 
-    async def check_names(self, before, after):
+    @commands.Cog.listener()
+    async def on_member_update(self, before, after):
         ''' Listener to check the users past names'''
         if before.name != after.name:
             if str(before.id) not in self.past_names.keys():
@@ -270,5 +271,5 @@ class Info:
 def setup(bot):
     ''' Add the cog to the bot '''
     cog = Info(bot)
-    bot.add_listener(cog.check_names, "on_member_update")
+    bot.add_listener(cog.on_member_update, "on_member_update")
     bot.add_cog(cog)
