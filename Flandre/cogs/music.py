@@ -772,7 +772,7 @@ class Music(commands.Cog):
         else:
             await ctx.send(f"{ctx.author.mention}, I am currently not connected to a voice channel")
 
-    @commands.command()
+    @commands.command(name='add', aliases=["play", "p"])
     @commands.guild_only()
     async def add(self, ctx, *, link: str):
         ''' Add command <Youtube Link/Soundcloud Link/Search term> '''
